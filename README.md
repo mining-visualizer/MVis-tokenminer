@@ -94,7 +94,7 @@ Node configuration:
 ;    RPCPort=8545
 
 Host=
-Port=
+RPCPort=
 
 ;--------------------------------------------------------
 [0xBitcoin]
