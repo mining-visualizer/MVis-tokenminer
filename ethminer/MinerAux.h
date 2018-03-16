@@ -415,11 +415,6 @@ public:
 			LogS << "No miner type specfied.  Please include either -C (CPU mining) or -G (OpenCL mining) on the command line";
 			exit(-1);
 		}
-		if (m_opMode == OperationMode::None)
-		{
-			LogS << "Operation mode not specfied.  Please include either -S (solo mining) or -P (pool mining) on the command line";
-			exit(-1);
-		}
 		LogD << " ";
 		LogD << "--- Program Start ---";
 
@@ -437,11 +432,10 @@ public:
 			exit(0);
 		}
 
-		// export DAG
-		if (m_exportDAG) 
+		if (m_opMode == OperationMode::None)
 		{
-			EthashGPUMiner::exportDAG(m_exportDAG_blockNum);
-			exit(0);
+			LogS << "Operation mode not specfied.  Please include either -S (solo mining) or -P (pool mining) on the command line";
+			exit(-1);
 		}
 
 
@@ -904,7 +898,7 @@ private:
 						break;
 				}
 				this_thread::sleep_for(chrono::seconds(5));
-				LogS << "Connecting to node at " << _nodeURL + ":" + _rpcPort << " ...";
+				LogS << "Connecting to " << _nodeURL + ":" + _rpcPort << " ...";
 			}
 			catch (const std::exception& e)
 			{

@@ -63,18 +63,34 @@ public:
 
 	void getWorkPool(bytes& _challenge, h256& _target, u256& _difficulty, string& _hashingAcct)
 	{
+		static string s_hashingAcct = "";
+		static u256 s_difficulty;
+		static h256 s_target;
+		static Timer s_lastFetch;
+
 		Json::Value data;
 		Json::Value result;
-		result = CallMethod("getPoolEthAddress", data);
-		_hashingAcct = result.asString();
 		result = CallMethod("getChallengeNumber", data);
 		_challenge = fromHex(result.asString());
-		data.append(m_userAcct);
-		result = CallMethod("getMinimumShareTarget", data);
-		_target = u256(result.asString());
-		result = CallMethod("getMinimumShareDifficulty", data);
-		m_difficulty = u256(result.asString());
-		_difficulty = m_difficulty;
+		
+		if (s_lastFetch.elapsedSeconds() > 20 || s_hashingAcct == "")
+		{
+			// no reason to retrieve this stuff every time.
+			result = CallMethod("getPoolEthAddress", data);
+			s_hashingAcct = result.asString();
+			data.append(m_userAcct);
+			result = CallMethod("getMinimumShareTarget", data);
+			s_target = u256(result.asString());
+			result = CallMethod("getMinimumShareDifficulty", data);
+			m_difficulty = u256(result.asString());
+			s_difficulty = m_difficulty;
+			s_lastFetch.restart();
+		}
+
+		_target = s_target;
+		_difficulty = s_difficulty;
+		_hashingAcct = s_hashingAcct;
+
 	}
 
 	void getWorkSolo(bytes& _challenge, h256& _target) throw (jsonrpc::JsonRpcException)
