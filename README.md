@@ -36,8 +36,9 @@ MVis-tokenminer is partially configured via command line parameters, and partial
 ```
 Node configuration:
     -N, --node <host:rpc_port>  Host address and RPC port of your node/mining pool. (default: 127.0.0.1:8545)
-	-N2, --node2 <host:rpc_port>  Failover node/mining pool (default: disabled)
+    -N2, --node2 <host:rpc_port>  Failover node/mining pool (default: disabled)
     -I, --polling-interval <n>  Check for new work every <n> milliseconds (default: 2000). 
+    -R, --farm-retries <n> Number of retries until switch to failover (default: 4)
 
  Benchmarking mode:
     -M,--benchmark  Benchmark for mining and exit

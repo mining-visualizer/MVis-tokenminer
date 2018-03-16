@@ -528,6 +528,7 @@ public:
 			<< "    -N, --node <host:rpc_port>  Host address and RPC port of your node/mining pool. (default: 127.0.0.1:8545)" << endl
 			<< "    -N2, --node2 <host:rpc_port>  Failover node/mining pool (default: disabled)" << endl
 			<< "    -I, --polling-interval <n>  Check for new work every <n> milliseconds (default: 2000). " << endl
+			<< "    -R, --farm-retries <n> Number of retries until switch to failover (default: 4)" << endl
 			<< endl
 			<< " Benchmarking mode:" << endl
 			<< "    -M, --benchmark  Benchmark for mining and exit" << endl
