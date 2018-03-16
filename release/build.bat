@@ -9,8 +9,9 @@ cd %~dp0
 IF ERRORLEVEL 1 GOTO ERROR
 
 
-REM Copy tokenminer.ini file 
+REM Copy tokenminer.ini and Readme file 
 copy "..\tokenminer.ini" stage
+copy "..\Readme.md" stage
 
 REM Copy binaries
 copy "..\build\ethminer\release\tokenminer.exe" stage\tokenminer
