@@ -216,10 +216,11 @@ You can then find the executable in the `build/tokenminer` subfolder
 
 ### Donations
 
-When in pool mining mode, MVis-tokenminer implements a 2% dev fee.  Every 4 hours it switches to 'dev fee mining' for a short period of time, based on the percent.  You can change the percent via `%localappdata%\tokenminer\tokenminer.ini`.  Add a `DevFee` setting to the `General` section.  For instance:
+When in pool mining mode, MVis-tokenminer implements a 2% dev fee.  Every 4 hours it switches to 'dev fee mining' for a short period of time, based on the percent.  You can change the percent via `%localappdata%\tokenminer\tokenminer.ini`.  Add a `DevFee` setting to the `General` section.  Use the following format:
 ```
 [General]
-DevFee=1.5
+; set dev fee to 2%
+DevFee=2.0
 ```
 
 
