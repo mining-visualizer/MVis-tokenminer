@@ -5,8 +5,7 @@ This page describes the miner for **0xBitcoin**.  For the regular ethereum miner
 
 This is a fork of my MVis-ethminer program, which was a fork of Genoil's ethminer-0.9.41-genoil-1.x.x. 
 
-* This miner is for AMD gpu's only.
-* I realize that the original Genoil miner supported mixed mining with NVidia devices, but that is not my area of expertise since I do not own any NVidia GPUs.  That may change in the future.  You may have some luck running this miner on NVidea GPUs, but I will not be providing much support for that, at least initially.
+* This miner is specifically designed for AMD GPUs, but seems to work well with NVidia devices as well.
 * Windows binaries can be downloaded from the  [Releases](https://github.com/mining-visualizer/MVis-tokenminer/releases) page, or you can build from source (see below).
 * Linux support is limited.  The original MVis-ethminer worked well on Linux, so I see no reason why this shouldn't as well, but I haven't tried building or running it under Linux.  You can try building from source and see if it works.
 * This miner supports both pool mining and solo mining. If you want to mine solo, you either need to run your own node, or use a public one like the ones Infura provides.
