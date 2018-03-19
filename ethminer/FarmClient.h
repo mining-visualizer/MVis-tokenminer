@@ -13,6 +13,10 @@
 #include <sstream>
 #include <boost/filesystem.hpp>
 
+#ifndef _WIN32
+#define stricmp strcasecmp
+#endif
+
 using namespace std;
 using namespace dev;
 using namespace dev::eth;
@@ -150,7 +154,7 @@ public:
 		data.append("0x" + _nonce.hex());
 		data.append(devFeeMining ? DonationAddress : m_userAcct);
 		data.append("0x" + toHex(_hash));
-		uint64_t diff = static_cast<uint64_t>(m_difficulty);
+		Json::Value::UInt64 diff = static_cast<Json::Value::UInt64>(m_difficulty);
 		data.append(diff);
 		data.append("0x" + toHex(_challenge));
 		Json::Value result = CallMethod("submitShare", data);
