@@ -8,18 +8,18 @@
 #define ETH_HAVE_SECP256K1
 #define HAVE_CONFIG_H
 
-#include "secp256k1.h"
+#include "secp256k1/secp256k1.h"
 
-#include "util.h"
-#include "num_impl.h"
-#include "field_impl.h"
-#include "scalar_impl.h"
-#include "group_impl.h"
-#include "ecmult_impl.h"
-#include "ecmult_gen_impl.h"
-#include "ecdsa_impl.h"
-#include "eckey_impl.h"
-#include "hash_impl.h"
+#include "secp256k1/util.h"
+#include "secp256k1/num_impl.h"
+#include "secp256k1/field_impl.h"
+#include "secp256k1/scalar_impl.h"
+#include "secp256k1/group_impl.h"
+#include "secp256k1/ecmult_impl.h"
+#include "secp256k1/ecmult_gen_impl.h"
+#include "secp256k1/ecdsa_impl.h"
+#include "secp256k1/eckey_impl.h"
+#include "secp256k1/hash_impl.h"
 
 struct secp256k1_context_struct {
     secp256k1_ecmult_context_t ecmult_ctx;
