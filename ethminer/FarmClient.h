@@ -169,28 +169,32 @@ public:
 		try
 		{
 			// check if any other miner in our farm already submitted a solution for this challenge
-			boost::filesystem::path m_challengeFilename = boost::filesystem::path(ProgOpt::Get("0xBitcoin", "ChallengeFolder")) / "challenge.txt";
-			ifstream ifs;
-			if (boost::filesystem::exists(m_challengeFilename))
+			string s = ProgOpt::Get("0xBitcoin", "ChallengeFolder");
+			if (s != "")
 			{
-				string s;
-				ifs.open(m_challengeFilename.generic_string(), fstream::in);
-				getlineEx(ifs, s);
-				if (s == toHex(_challenge))
+				boost::filesystem::path m_challengeFilename = boost::filesystem::path(s) / "challenge.txt";
+				ifstream ifs;
+				if (boost::filesystem::exists(m_challengeFilename))
 				{
-					LogS << "Another miner in the local farm already got this one : " << toHex(_challenge).substr(0, 8);
-					return;
+					string s;
+					ifs.open(m_challengeFilename.generic_string(), fstream::in);
+					getlineEx(ifs, s);
+					if (s == toHex(_challenge))
+					{
+						LogS << "Another miner in the local farm already got this one : " << toHex(_challenge).substr(0, 8);
+						return;
+					}
 				}
+				ifs.close();
+				// write this challenge value to our synchronization file.
+				std::ofstream ofs(m_challengeFilename.generic_string(), std::ofstream::out);
+				ofs << toHex(_challenge);
+				ofs.close();
 			}
-			ifs.close();
-			// write this challenge value to our synchronization file.
-			std::ofstream ofs(m_challengeFilename.generic_string(), std::ofstream::out);
-			ofs << toHex(_challenge);
-			ofs.close();
 		}
 		catch (const std::exception& e)
 		{
-			LogB << "Exception: submitWork - " << e.what();
+			LogB << "Exception: submitWorkSolo::CheckChallengeFolder - " << e.what();
 		}
 
 
