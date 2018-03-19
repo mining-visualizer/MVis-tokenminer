@@ -716,7 +716,7 @@ uint64_t ethash_cl_miner::nextNonceIndex(uint64_t &_nonceIndex, bool _overrideRa
 }
 
 
-bool ethash_cl_miner::init(unsigned _platformId, unsigned _deviceId, h160 _miningAccount)
+bool ethash_cl_miner::init(unsigned _platformId, unsigned _deviceId)
 {
 	// get all platforms
 	try
@@ -851,12 +851,9 @@ bool ethash_cl_miner::init(unsigned _platformId, unsigned _deviceId, h160 _minin
 			m_nonceBuffer[i] = cl::Buffer(m_context, CL_MEM_READ_ONLY, 32);
 		}
 
-		m_queue[0].enqueueWriteBuffer(m_sender, CL_TRUE, 0, 20, _miningAccount.data());
 		m_searchKernel.setArg(1, m_sender);
 		m_searchKernel.setArg(5, ~0u);		// isolate argument
 		m_searchKernel.setArg(6, m_buff);
-
-
 	}
 	catch (cl::Error const& err)
 	{
@@ -868,11 +865,12 @@ bool ethash_cl_miner::init(unsigned _platformId, unsigned _deviceId, h160 _minin
 }
 
 
-void ethash_cl_miner::search(bytes _challenge, uint64_t _target, search_hook& _hook)
+void ethash_cl_miner::search(bytes _challenge, uint64_t _target, h160 _miningAccount, search_hook& _hook)
 {
 	try
 	{
-		LogF << "Trace: ethash_cl_miner::search-1, device[" << m_device << "]";
+		LogF << "Trace: ethash_cl_miner::search-1, challenge = " << toHex(_challenge) << ", target = " 
+			 << std::hex << _target << ", miningAccount = " << _miningAccount.hex() << ", device[" << m_device << "]";
 		int l_throttle = 0;		// percent throttling
 		int l_bufferCount;
 		// used for throttling calculations. does not include throttling delays.
@@ -890,6 +888,7 @@ void ethash_cl_miner::search(bytes _challenge, uint64_t _target, search_hook& _h
 
 		h256 nonce;
 		m_queue[0].enqueueWriteBuffer(m_challenge, CL_TRUE, 0, 32, _challenge.data());
+		m_queue[0].enqueueWriteBuffer(m_sender, CL_TRUE, 0, 20, _miningAccount.data());
 		m_searchKernel.setArg(0, m_challenge);
 		m_searchKernel.setArg(4, _target);
 
