@@ -415,6 +415,12 @@ public:
 			LogS << "No miner type specfied.  Please include either -C (CPU mining) or -G (OpenCL mining) on the command line";
 			exit(-1);
 		}
+		string mAcct = ProgOpt::Get("0xBitcoin", "MinerAcct");
+		if ("" == mAcct || "0x0000000000000000000000000000000000000000" == mAcct)
+		{
+			LogS << "Please set 'MinerAcct' in tokenminer.ini to a valid ETH account";
+			exit(0);
+		}
 		LogD << " ";
 		LogD << "--- Program Start ---";
 

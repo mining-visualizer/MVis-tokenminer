@@ -297,7 +297,6 @@ void dev::eth::EthashGPUMiner::exportDAG(unsigned _block)
 	light = EthashAux::light(seedHash);
 	bytesConstRef lightData = light->data();
 
-	string minerAcct = ProgOpt::Get("0xBitcoin", "MinerAcct");
 	if (!miner->init(s_platformId, 0))
 		throw cl::Error(-1, "cl_miner.init failed!");
 
