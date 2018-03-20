@@ -198,7 +198,7 @@ sudo apt-get -y install software-properties-common
 sudo add-apt-repository -y ppa:ethereum/ethereum
 sudo apt-get update
 sudo apt-get install git cmake libcryptopp-dev libleveldb-dev libjsoncpp-dev libjsonrpccpp-dev libboost-all-dev libgmp-dev libreadline-dev libcurl4-gnutls-dev ocl-icd-libopencl1 opencl-headers mesa-common-dev libmicrohttpd-dev build-essential -y
-git clone -b 0xbitcoin https://github.com/mining-visualizer/MVis-tokenminer.git <mvis_folder>
+git clone https://github.com/mining-visualizer/MVis-tokenminer.git <mvis_folder>
 
 - download the AMD ADL SDK from the AMD website, and extract it to a temporary folder
 - copy all 3 .h files from the <adl_package>/include/ folder to <mvis_folder>/extdep/include/amd_adl/  

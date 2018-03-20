@@ -416,7 +416,8 @@ public:
 			exit(-1);
 		}
 		string mAcct = ProgOpt::Get("0xBitcoin", "MinerAcct");
-		if ("" == mAcct || "0x0000000000000000000000000000000000000000" == mAcct)
+		string notset("0x....");
+		if ("" == mAcct || notset == mAcct.substr(0, notset.length()))
 		{
 			LogS << "Please set 'MinerAcct' in tokenminer.ini to a valid ETH account";
 			exit(0);

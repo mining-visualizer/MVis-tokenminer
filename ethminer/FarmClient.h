@@ -164,10 +164,10 @@ public:
 		try
 		{
 			// check if any other miner in our farm already submitted a solution for this challenge
-			string s = ProgOpt::Get("0xBitcoin", "ChallengeFolder");
-			if (s != "")
+			string folder = ProgOpt::Get("0xBitcoin", "ChallengeFolder");
+			if (folder != "")
 			{
-				boost::filesystem::path m_challengeFilename = boost::filesystem::path(s) / "challenge.txt";
+				boost::filesystem::path m_challengeFilename = boost::filesystem::path(folder) / "challenge.txt";
 				ifstream ifs;
 				if (boost::filesystem::exists(m_challengeFilename))
 				{
