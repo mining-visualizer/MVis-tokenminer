@@ -67,33 +67,28 @@ public:
 
 	void getWorkPool(bytes& _challenge, h256& _target, u256& _difficulty, string& _hashingAcct)
 	{
-		static string s_hashingAcct = "";
-		static u256 s_difficulty;
-		static h256 s_target;
 		static Timer s_lastFetch;
-
 		Json::Value data;
 		Json::Value result;
 		result = CallMethod("getChallengeNumber", data);
 		_challenge = fromHex(result.asString());
 		
-		if (s_lastFetch.elapsedSeconds() > 20 || s_hashingAcct == "")
+		if (s_lastFetch.elapsedSeconds() > 20 || m_hashingAcct == "")
 		{
 			// no reason to retrieve this stuff every time.
 			result = CallMethod("getPoolEthAddress", data);
-			s_hashingAcct = result.asString();
+			m_hashingAcct = result.asString();
 			data.append(m_userAcct);
 			result = CallMethod("getMinimumShareTarget", data);
-			s_target = u256(result.asString());
+			m_target = u256(result.asString());
 			result = CallMethod("getMinimumShareDifficulty", data);
 			m_difficulty = u256(result.asString());
-			s_difficulty = m_difficulty;
 			s_lastFetch.restart();
 		}
 
-		_target = s_target;
-		_difficulty = s_difficulty;
-		_hashingAcct = s_hashingAcct;
+		_target = m_target;
+		_difficulty = m_difficulty;
+		_hashingAcct = m_hashingAcct;
 
 	}
 
@@ -169,28 +164,32 @@ public:
 		try
 		{
 			// check if any other miner in our farm already submitted a solution for this challenge
-			boost::filesystem::path m_challengeFilename = boost::filesystem::path(ProgOpt::Get("0xBitcoin", "ChallengeFolder")) / "challenge.txt";
-			ifstream ifs;
-			if (boost::filesystem::exists(m_challengeFilename))
+			string folder = ProgOpt::Get("0xBitcoin", "ChallengeFolder");
+			if (folder != "")
 			{
-				string s;
-				ifs.open(m_challengeFilename.generic_string(), fstream::in);
-				getlineEx(ifs, s);
-				if (s == toHex(_challenge))
+				boost::filesystem::path m_challengeFilename = boost::filesystem::path(folder) / "challenge.txt";
+				ifstream ifs;
+				if (boost::filesystem::exists(m_challengeFilename))
 				{
-					LogS << "Another miner in the local farm already got this one : " << toHex(_challenge).substr(0, 8);
-					return;
+					string s;
+					ifs.open(m_challengeFilename.generic_string(), fstream::in);
+					getlineEx(ifs, s);
+					if (s == toHex(_challenge))
+					{
+						LogS << "Another miner in the local farm already got this one : " << toHex(_challenge).substr(0, 8);
+						return;
+					}
 				}
+				ifs.close();
+				// write this challenge value to our synchronization file.
+				std::ofstream ofs(m_challengeFilename.generic_string(), std::ofstream::out);
+				ofs << toHex(_challenge);
+				ofs.close();
 			}
-			ifs.close();
-			// write this challenge value to our synchronization file.
-			std::ofstream ofs(m_challengeFilename.generic_string(), std::ofstream::out);
-			ofs << toHex(_challenge);
-			ofs.close();
 		}
 		catch (const std::exception& e)
 		{
-			LogB << "Exception: submitWork - " << e.what();
+			LogB << "Exception: submitWorkSolo::CheckChallengeFolder - " << e.what();
 		}
 
 
@@ -634,7 +633,9 @@ private:
 	int m_startGas;
 	int m_maxGas;
 	int m_bidTop;
+	string m_hashingAcct = "";
 	u256 m_difficulty;
+	h256 m_target;
 
 };
 

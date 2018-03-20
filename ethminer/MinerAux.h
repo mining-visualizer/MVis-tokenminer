@@ -415,6 +415,13 @@ public:
 			LogS << "No miner type specfied.  Please include either -C (CPU mining) or -G (OpenCL mining) on the command line";
 			exit(-1);
 		}
+		string mAcct = ProgOpt::Get("0xBitcoin", "MinerAcct");
+		string notset("0x....");
+		if ("" == mAcct || notset == mAcct.substr(0, notset.length()))
+		{
+			LogS << "Please set 'MinerAcct' in tokenminer.ini to a valid ETH account";
+			exit(0);
+		}
 		LogD << " ";
 		LogD << "--- Program Start ---";
 
@@ -744,7 +751,6 @@ private:
 			nodeRPC = new FarmClient(*nodeClient, OperationMode::Solo);
 		}
 
-		EthashProofOfWork::WorkPackage current, previous;
 		h256 target;
 		bytes challenge;
 		deque<bytes> recentChallenges;
@@ -826,10 +832,6 @@ private:
 									recentChallenges.pop_back();
 								challenge = _challenge;
 								target = _target;
-
-								//target = h256(0x0000000080000000);	// easy target for testing
-								//target = (u256) target << 192;
-
 								LogS << "New challenge : " << toHex(_challenge).substr(0, 8);
 								f.setWork_token(challenge, target);
 								workRPC.setChallenge(challenge);
@@ -893,8 +895,8 @@ private:
 				{
 					// if there's a failover available, we'll switch to it, but worst case scenario, it could be 
 					// unavailable as well, so at some point we should pause mining.  we'll do it here.
-					current.reset();
-					f.setWork(current);
+					challenge.clear();
+					f.setWork_token(challenge, target);
 					LogS << "Mining paused ...";
 					if (failOverAvailable())
 						break;
