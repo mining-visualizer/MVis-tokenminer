@@ -1,5 +1,12 @@
 @ECHO OFF
 
+echo.
+echo.
+echo Did you remember to change the version number?
+echo.
+echo.
+pause
+
 REM the expression %~dp0 returns the drive and folder in which this batch file is located
  
 cd %~dp0
