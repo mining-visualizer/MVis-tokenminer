@@ -4,8 +4,7 @@ cd ../build
 
 # compile
 
-make clean
-make ethminer
+make tokenminer
 
 if [ $? -ge 1 ] ; then
    echo "."
@@ -18,13 +17,14 @@ if [ $? -ge 1 ] ; then
    exit 1
 fi
 
-cp ethminer/ethminer ../release/stage
-cp ../ethminer.ini ../release/stage
+cp ethminer/tokenminer ../release/stage
+cp ../tokenminer.ini ../release/stage
+cp ../README.md ../release/stage
 
 cd ../release
 
 rm *.tar.gz
-tar -czf mvis-ethminer-version-linux.tar.gz  --directory=stage .
+tar -czf mvis-tokenminer-version-linux.tar.gz  --directory=stage .
 
 if [ $? -ge 1 ] ; then
    echo "."
