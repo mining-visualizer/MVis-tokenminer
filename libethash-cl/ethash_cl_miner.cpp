@@ -72,7 +72,7 @@ using namespace std;
 using namespace dev;
 
 unsigned const ethash_cl_miner::c_defaultLocalWorkSize = 128;
-unsigned const ethash_cl_miner::c_defaultWorkSizeMultiplier = 8192;
+unsigned const ethash_cl_miner::c_defaultWorkSizeMultiplier = 32768;
 
 unsigned const c_nonceLinear = 1;
 unsigned const c_nonceRandom = 2;
