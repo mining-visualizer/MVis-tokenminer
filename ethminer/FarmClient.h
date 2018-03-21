@@ -53,7 +53,7 @@ public:
 	) : jsonrpc::Client(conn, type)
 	{
 		m_opMode = _opMode;
-		m_userAcct = ProgOpt::Get("0xBitcoin", "MinerAcct");
+		userAcct = ProgOpt::Get("0xBitcoin", "MinerAcct");
 		if (_opMode == OperationMode::Solo)
 		{
 			m_tokenContract = ProgOpt::Get("0xBitcoin", "TokenContract");
@@ -72,7 +72,7 @@ public:
 		Json::Value result;
 		result = CallMethod("getChallengeNumber", data);
 		_challenge = fromHex(result.asString());
-		data.append(m_userAcct);
+		data.append(userAcct);
 		result = CallMethod("getMinimumShareTarget", data);
 		m_target = u256(result.asString());
 
@@ -96,7 +96,7 @@ public:
 	{
 		// challenge
 		Json::Value p;
-		p["from"] = m_userAcct;			
+		p["from"] = userAcct;			
 		p["to"] = m_tokenContract;		
 
 		h256 bMethod = sha3("getChallengeNumber()");
@@ -147,7 +147,7 @@ public:
 
 		Json::Value data;
 		data.append("0x" + _nonce.hex());
-		data.append(devFeeMining ? DonationAddress : m_userAcct);
+		data.append(devFeeMining ? DonationAddress : userAcct);
 		data.append("0x" + toHex(_hash));
 		Json::Value::UInt64 diff = static_cast<Json::Value::UInt64>(m_difficulty);
 		data.append(diff);
@@ -196,12 +196,9 @@ public:
 		// prepare transaction
 		Transaction t;
 		if (m_lastSolution.elapsedSeconds() > 5 * 60 || m_txNonce == -1)
-		{
 			m_txNonce = getNextNonce();
-		} else
-		{
+		else
 			m_txNonce++;
-		}
 		m_lastSolution.restart();
 		t.nonce = m_txNonce;
 		t.receiveAddress = toAddress(m_tokenContract);
@@ -389,7 +386,7 @@ public:
 	int getNextNonce() {
 		// get transaction count for nonce
 		Json::Value p;
-		p.append(m_userAcct);
+		p.append(userAcct);
 		p.append("latest");
 		Json::Value result = CallMethod("eth_getTransactionCount", p);
 		return HexToInt(result.asString());
@@ -397,7 +394,7 @@ public:
 
 	uint64_t tokenBalance() {
 		Json::Value p;
-		p["from"] = m_userAcct;			
+		p["from"] = userAcct;			
 		p["to"] = m_tokenContract;			
 
 		h256 bMethod = sha3("balanceOf(address)");
@@ -406,7 +403,7 @@ public:
 
 		// address
 		stringstream ss;
-		ss << std::setw(64) << std::setfill('0') << m_userAcct.substr(2);
+		ss << std::setw(64) << std::setfill('0') << userAcct.substr(2);
 		std::string s2(ss.str());
 		sMethod = sMethod + s2;
 		p["data"] = sMethod;
@@ -460,7 +457,7 @@ public:
 		u256 recommendation = 0;
 		for (auto m : m_biddingMiners)
 		{
-			if (m.challenge == _challenge && stricmp(m.account.c_str(), m_userAcct.c_str()) != 0)
+			if (m.challenge == _challenge && stricmp(m.account.c_str(), userAcct.c_str()) != 0)
 			{
 				LogF << "Trace: RecommendedGasPrice, existing bidder " << m.account.substr(0,10) << ", gasPrice=" << m.gasPrice;
 				if (m.gasPrice > recommendation)
@@ -618,10 +615,10 @@ public:
 
 public:
 	bool devFeeMining = false;
+	string userAcct;
 
 private:
 	OperationMode m_opMode;
-	string m_userAcct;
 	string m_userAcctPK;
 	string m_tokenContract;
 	int m_txNonce = -1;

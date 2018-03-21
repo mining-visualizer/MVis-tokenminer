@@ -750,7 +750,8 @@ private:
 			nodeClient = new jsonrpc::HttpClient("https://mainnet.infura.io/J9KBwsJ0q1LMIQvzDlGC:8545");
 			nodeRPC = new FarmClient(*nodeClient, OperationMode::Solo);
 		}
-
+		else
+			f.hashingAcct = workRPC.userAcct;
 		h256 target;
 		bytes challenge;
 		deque<bytes> recentChallenges;
