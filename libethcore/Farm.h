@@ -205,7 +205,7 @@ public:
 			m_onSetWork(upper64OfHash(_target));
 
 		WriteGuard l(x_minerWork);
-		if (_challenge == challenge)
+		if (_challenge == challenge && _target == target)
 			return;
 		challenge = _challenge;
 		target = _target;

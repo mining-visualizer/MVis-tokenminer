@@ -72,15 +72,15 @@ public:
 		Json::Value result;
 		result = CallMethod("getChallengeNumber", data);
 		_challenge = fromHex(result.asString());
-		
+		data.append(m_userAcct);
+		result = CallMethod("getMinimumShareTarget", data);
+		m_target = u256(result.asString());
+
 		if (s_lastFetch.elapsedSeconds() > 20 || m_hashingAcct == "")
 		{
 			// no reason to retrieve this stuff every time.
-			result = CallMethod("getPoolEthAddress", data);
+			result = CallMethod("getPoolEthAddress", Json::Value());
 			m_hashingAcct = result.asString();
-			data.append(m_userAcct);
-			result = CallMethod("getMinimumShareTarget", data);
-			m_target = u256(result.asString());
 			result = CallMethod("getMinimumShareDifficulty", data);
 			m_difficulty = u256(result.asString());
 			s_lastFetch.restart();

@@ -295,7 +295,9 @@ public:
 
 	void setWork_token(bytes _challenge, h256 _target) 
 	{
-		LogF << "Trace: GenericMiner::setWork, miner[" << m_index << "]";
+		uint64_t t = upper64OfHash(_target);
+		LogF << "Trace: GenericMiner::setWork_token, challenge = " << toHex(_challenge).substr(0, 8)
+			<< ", target = " << std::hex << std::setw(16) << std::setfill('0') << t << ", miner[" << m_index << "]";
 		auto old = challenge;
 		{
 			Guard l(x_work);

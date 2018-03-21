@@ -869,8 +869,9 @@ void ethash_cl_miner::search(bytes _challenge, uint64_t _target, h160 _miningAcc
 {
 	try
 	{
-		LogF << "Trace: ethash_cl_miner::search-1, challenge = " << toHex(_challenge) << ", target = " 
-			 << std::hex << _target << ", miningAccount = " << _miningAccount.hex() << ", device[" << m_device << "]";
+		LogF << "Trace: ethash_cl_miner::search-1, challenge = " << toHex(_challenge).substr(0, 8) << ", target = "
+			<< std::hex << std::setw(16) << std::setfill('0') << _target << ", miningAccount = " << _miningAccount.hex() 
+			<< ", device[" << m_device << "]";
 		int l_throttle = 0;		// percent throttling
 		int l_bufferCount;
 		// used for throttling calculations. does not include throttling delays.

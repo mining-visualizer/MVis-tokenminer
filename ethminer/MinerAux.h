@@ -818,13 +818,11 @@ private:
 
 						if (_challenge != challenge)
 						{
-							// when queried for the most recent challenge, infura nodes will occasionally respond 
-							// with the previous one.
+							// when queried for the most recent challenge, infura nodes will occasionally respond with the 
+							// previous one. this only applies to solo mining, but doesn't hurt to do it for pool mining.
 							bool seenBefore = false;
 							for (bytes c : recentChallenges)
-							{
 								seenBefore = (seenBefore || (c == _challenge));
-							}
 							if (!seenBefore)
 							{
 								recentChallenges.push_front(_challenge);
@@ -837,6 +835,11 @@ private:
 								workRPC.setChallenge(challenge);
 
 							}
+						}
+						if (_target != target)
+						{
+							target = _target;
+							f.setWork_token(challenge, target);
 						}
 					}
 
