@@ -22,6 +22,7 @@ This is a fork of my MVis-ethminer program, which was a fork of Genoil's ethmine
     * You can specify the address and port of your node in the `.ini` file, or on the command line.
     * You can enable gas price bidding.  (see comments in the file).  Note that enabling this feature does not guarantee that you will win every bid.  Network latency will sometimes result in failed transactions, even if you 'out-bid' the other transaction.
 * Windows Only: download and install **both** the [VC 2013 Redistributable](https://www.microsoft.com/en-ca/download/details.aspx?id=40784) and the [VC 2015 Redistributable](https://www.microsoft.com/en-ca/download/details.aspx?id=48145)
+* Linux Only: Open the text file INSTALL-LINUX and follow the directions contained therein.
 * Run `tokenminer.exe --list-devices -G`.  Verify your GPU's are recognized.  Pay special attention to the PlatformID.  If it is anything other than 0, you will need to add `--opencl-platform <n>` to your command line.
 * Start POOL MINING with `tokenminer.exe -P -G`.  This assumes you've specified the pool mining address in the .INI file.  You could also specify the mining pool on the command line.  For instance, `tokenminer.exe -P -G -N http://your_mining_pool.com:8586`  (all one line)
 * Start SOLO MINING with `tokenminer.exe -S -G`.  This assumes you've specified the node address in the .INI file.

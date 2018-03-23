@@ -1,0 +1,13 @@
+
+For Linux installs, please follow these instructions, in addition to the ones in README.md:
+
+1. Open a command prompt in the folder one level below where you extracted the download 
+   package, specifically in the folder containing the file 'tokenminer'
+2. Enter the following commands:
+
+      sudo cp ./bin/*.so /usr/local/bin
+      sudo apt-get update
+      sudo apt-get -y install software-properties-common
+      sudo add-apt-repository -y ppa:ethereum/ethereum
+      sudo apt-get update
+      sudo apt-get install git cmake libcryptopp-dev libleveldb-dev libjsoncpp-dev libjsonrpccpp-dev libboost-all-dev libgmp-dev libreadline-dev libcurl4-gnutls-dev ocl-icd-libopencl1 opencl-headers mesa-common-dev libmicrohttpd-dev build-essential -y

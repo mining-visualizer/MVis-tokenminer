@@ -17,9 +17,16 @@ if [ $? -ge 1 ] ; then
    exit 1
 fi
 
+cp libethcore/libethcore.so ../release/stage/bin
+cp libdevcore/libdevcore.so ../release/stage/bin
+cp libstratum/libethstratum.so ../release/stage/bin
+cp libethash-cl/libethash-cl.so ../release/stage/bin
+cp libethash/libethash.so ../release/stage/bin
+
 cp ethminer/tokenminer ../release/stage
 cp ../tokenminer.ini ../release/stage
 cp ../README.md ../release/stage
+cp ../INSTALL-LINUX ../release/stage
 
 cd ../release
 
