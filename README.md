@@ -15,15 +15,16 @@ This is a fork of my MVis-ethminer program, which was a fork of Genoil's ethmine
 ### Installation
 
 * Unzip the [download package](https://github.com/mining-visualizer/MVis-tokenminer/releases) anywhere you like.  
-* Move `tokenminer.ini` to `%LocalAppData%/tokenminer` on Windows, or `$HOME/.config/tokenminer` on Linux.  If that folder path does not exist, you will need to create it manually.
-* For POOL MINING, the main thing you need to specify in the .INI file is your ETH account address to which rewards will be paid out.  You can also specify the pool mining address, or you can do that on the command line (-N)
+* Move `tokenminer.ini` to `C:\Users\[USER]\AppData\Local\tokenminer` on Windows, or `$HOME/.config/tokenminer` on Linux.  If that folder path does not exist, you will need to create it manually.
+* Open up `tokenminer.ini` using any text editor.
+* For POOL MINING, the main thing you need to specify in the .INI file is your ETH account address to which rewards will be paid out. Look for the line that starts with `MinerAcct=`.  You can also specify the pool mining address in the `[Node]` section, or you can do that on the command line (-N).  See below for all command line options.
 * For SOLO MINING:
     * Input an ETH account and associated private key. (Sorry about making you enter it in plain text format. Make sure it is a 'throw away' account with only the bare minimum amount of money.)
     * You can specify the address and port of your node in the `.ini` file, or on the command line.
     * You can enable gas price bidding.  (see comments in the file).  Note that enabling this feature does not guarantee that you will win every bid.  Network latency will sometimes result in failed transactions, even if you 'out-bid' the other transaction.
 * Windows Only: download and install **both** the [VC 2013 Redistributable](https://www.microsoft.com/en-ca/download/details.aspx?id=40784) and the [VC 2015 Redistributable](https://www.microsoft.com/en-ca/download/details.aspx?id=48145)
 * Linux Only: Open the text file INSTALL-LINUX and follow the directions contained therein.
-* Run `tokenminer.exe --list-devices -G`.  Verify your GPU's are recognized.  Pay special attention to the PlatformID.  If it is anything other than 0, you will need to add `--opencl-platform <n>` to your command line.
+* Open a command prompt in the folder containing tokenminer.exe and type `tokenminer.exe --list-devices -G`.  Verify your GPU's are recognized.  Pay special attention to the PlatformID.  If it is anything other than 0, you will need to add `--opencl-platform <n>` to your command line.
 * Start POOL MINING with `tokenminer.exe -P -G`.  This assumes you've specified the pool mining address in the .INI file.  You could also specify the mining pool on the command line.  For instance, `tokenminer.exe -P -G -N http://your_mining_pool.com:8586`  (all one line)
 * Start SOLO MINING with `tokenminer.exe -S -G`.  This assumes you've specified the node address in the .INI file.
 

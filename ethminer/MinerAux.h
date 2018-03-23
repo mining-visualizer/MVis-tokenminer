@@ -820,21 +820,20 @@ private:
 						if (_challenge != challenge)
 						{
 							// when queried for the most recent challenge, infura nodes will occasionally respond with the 
-							// previous one. this only applies to solo mining, but doesn't hurt to do it for pool mining.
+							// previous one. this only applies to solo mining.  when pool mining, always use what the pool gives us.
 							bool seenBefore = false;
 							for (bytes c : recentChallenges)
 								seenBefore = (seenBefore || (c == _challenge));
-							if (!seenBefore)
+							if (!seenBefore || m_opMode == OperationMode::Pool)
 							{
 								recentChallenges.push_front(_challenge);
 								if (recentChallenges.size() > 5)
 									recentChallenges.pop_back();
 								challenge = _challenge;
 								target = _target;
-								LogS << "New challenge : " << toHex(_challenge).substr(0, 8);
+								LogB << "New challenge : " << toHex(_challenge).substr(0, 8);
 								f.setWork_token(challenge, target);
 								workRPC.setChallenge(challenge);
-
 							}
 						}
 						if (_target != target)
