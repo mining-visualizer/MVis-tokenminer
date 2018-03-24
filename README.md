@@ -212,7 +212,7 @@ cmake -DBUNDLE=miner ..
 make
 ```
 
-You can then find the executable in the `build/tokenminer` subfolder
+You can then find the executable in the `build/ethminer` subfolder
 
 
 ### Donations

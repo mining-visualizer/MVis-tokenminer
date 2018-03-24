@@ -682,7 +682,7 @@ private:
 	* positionedOutput
 	*----------------------------------------------------------------------------------*/
 	void positionedOutput(OperationMode _opMode, GenericFarm<EthashProofOfWork> &f, Timer lastBlockTime, uint64_t tokenBalance, 
-						  u256 _difficulty, h256 _target)
+						  uint64_t _difficulty, h256 _target)
 	{
 		f.hashRates().update();
 		LogXY(1, 1) << "Rates:" << f.hashRates() << " | Temp: " << f.getMinerTemps() << " | Fan: " << f.getFanSpeeds() << "         ";
@@ -755,7 +755,7 @@ private:
 		h256 target;
 		bytes challenge;
 		deque<bytes> recentChallenges;
-		u256 difficulty;
+		uint64_t difficulty;
 
 		int tokenBalance = nodeRPC->tokenBalance();
 
@@ -867,6 +867,7 @@ private:
 						}
 						devFeeSwitch.restart();
 					}
+
 					this_thread::sleep_for(chrono::milliseconds(200));
 				}
 

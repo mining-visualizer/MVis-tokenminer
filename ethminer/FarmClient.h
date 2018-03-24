@@ -65,7 +65,7 @@ public:
 		}
 	}
 
-	void getWorkPool(bytes& _challenge, h256& _target, u256& _difficulty, string& _hashingAcct)
+	void getWorkPool(bytes& _challenge, h256& _target, uint64_t& _difficulty, string& _hashingAcct)
 	{
 		static Timer s_lastFetch;
 		Json::Value data;
@@ -82,7 +82,7 @@ public:
 			result = CallMethod("getPoolEthAddress", Json::Value());
 			m_hashingAcct = result.asString();
 			result = CallMethod("getMinimumShareDifficulty", data);
-			m_difficulty = u256(result.asString());
+			m_difficulty = atoll(result.asString().c_str());
 			s_lastFetch.restart();
 		}
 
@@ -149,8 +149,7 @@ public:
 		data.append("0x" + _nonce.hex());
 		data.append(devFeeMining ? DonationAddress : userAcct);
 		data.append("0x" + toHex(_hash));
-		Json::Value::UInt64 diff = static_cast<Json::Value::UInt64>(m_difficulty);
-		data.append(diff);
+		data.append(m_difficulty);
 		data.append("0x" + toHex(_challenge));
 		Json::Value result = CallMethod("submitShare", data);
 		string res = result.asString();
@@ -631,7 +630,7 @@ private:
 	int m_maxGas;
 	int m_bidTop;
 	string m_hashingAcct = "";
-	u256 m_difficulty;
+	uint64_t m_difficulty;
 	h256 m_target;
 
 };
