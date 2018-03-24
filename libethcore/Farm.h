@@ -200,7 +200,9 @@ public:
 	*----------------------------------------------------------------------------------*/
 	void setWork_token(bytes _challenge, h256 _target)
 	{
-		LogF << "Trace: GenericFarm::setWork, challenge=" << toHex(_challenge).substr(0, 8);
+		
+		LogF << "Trace: GenericFarm::setWork, challenge=" << toHex(_challenge).substr(0, 8)
+			<< ", target=" << std::hex << std::setw(16) << std::setfill('0') << upper64OfHash(_target);
 		if (m_onSetWork)
 			m_onSetWork(upper64OfHash(_target));
 

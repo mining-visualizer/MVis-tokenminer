@@ -75,8 +75,6 @@ Node configuration:
 #### INI File Settings
 
 ```
-
-
 [General]
 
 ;--------------------------------------------------------
@@ -109,9 +107,9 @@ RPCPort=
 [0xBitcoin]
 
 ; POOL MINING: Your ETH account, to which payouts will be made. THE PRIVATE
-;   KEY IS NOT REQUIRED.
-; SOLO MINING: Your ETH account and private key.  Note the acct starts with 0x, but
-;   not the PK.  Mining rewards will be deposited to this account.  Transaction
+;   KEY IS NOT REQUIRED.  Note the acct should start with 0x.
+; SOLO MINING: Your ETH account and private key.  Note the PK does NOT start
+;   with 0x.  Mining rewards will be deposited to this account.  Transaction
 ;   fees will be DRAWN from this account.  Make sure you have enough funds!!
 ;   If you have multiple mining rigs, make sure each rig is running under a 
 ;   separate ETH account, to prevent nonce collisions if they happen to submit
@@ -120,6 +118,10 @@ RPCPort=
 MinerAcct=0x........................................
 AcctPK=................................................................
 
+; Desired average minutes between shares.  Defaults to 2. Miner will
+; auto-adjust difficulty based on your hash rate. You can also specify
+; 'Pool' to use the difficulty assigned by your mining pool.
+MinutesPerShare=
 
 ; The remaining settings in this section apply only to SOLO MINING:
 
@@ -163,7 +165,6 @@ ThrottleTemp=80
 ; Number of seconds after which the entire mining rig will shutdown if one or more GPUs
 ; remain at or above ThrottleTemp.
 ShutDown=20
-
 
 ```
 

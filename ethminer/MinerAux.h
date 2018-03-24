@@ -437,6 +437,22 @@ public:
 			LogS << "Invalid 'MinerAcct' in tokenminer.ini";
 			exit(0);
 		}
+
+		string mps = ProgOpt::Get("0xBitcoin", "MinutesPerShare","2");
+		LowerCase(mps);
+		if (mps == "pool")
+			m_minutesPerShare = -1;
+		else
+		{
+			m_minutesPerShare = atoi(mps.c_str());
+			if (m_minutesPerShare < 1)
+			{
+				LogS << "Invalid 'MinutesPerShare' in tokenminer.ini. Defaulting to 2";
+				m_minutesPerShare = 2;
+			}
+		}
+
+
 		LogD << " ";
 		LogD << "--- Program Start ---";
 
@@ -712,6 +728,45 @@ private:
 		}
 	}
 
+	h256 targetFromDiff(uint64_t _difficulty)
+	{
+		// 2^234
+		u256 pow_2_234 = u256("0x040000000000000000000000000000000000000000000000000000000000");
+		return pow_2_234 / _difficulty;
+	}
+
+	uint64_t diffFromTarget(h256 _target)
+	{
+		// 2^234
+		u256 pow_2_234 = u256("0x040000000000000000000000000000000000000000000000000000000000");
+		u256 t = pow_2_234 / u256(_target);
+		return static_cast<uint64_t>(t);
+	}
+
+	void calcFinalTarget(GenericFarm<EthashProofOfWork>& f, h256& _target, uint64_t& _difficulty)
+	{
+		static float s_lastRate = 0;
+
+		float currentRate;
+
+		// if we're going by the pool difficulty, do nothing
+		if (m_minutesPerShare == -1) return;
+
+		currentRate = f.hashRates().farmRate();
+		if (s_lastRate == 0 || currentRate == 0)
+			currentRate = f.minerCount() * 500;	// assume 500 MH/s per gpu
+
+		// only recalculate if change is > 10%
+		if (abs(s_lastRate - currentRate) / s_lastRate > 0.1)
+			s_lastRate = currentRate;
+
+		double divisor = s_lastRate * 1000000.0 * m_minutesPerShare * 60;
+		uint64_t target64 = (divisor == 0) ? 0 : ~uint64_t(0) / divisor;
+		u256 target256 = target64;
+		_target = target256 << 192;
+		_difficulty = diffFromTarget(_target);
+	}
+
 
 	/*-----------------------------------------------------------------------------------
 	* doFarm
@@ -825,6 +880,8 @@ private:
 							workRPC.getWorkSolo(_challenge, _target);
 						lastGetWork.restart();
 
+						calcFinalTarget(f, _target, difficulty);
+
 						if (!connectedToNode)
 						{
 							connectedToNode = true;
@@ -894,10 +951,15 @@ private:
 				keccak256_0xBitcoin(challenge, sender, solution, hash);
 				if (h256(hash) < target) {
 					if (m_opMode == OperationMode::Pool)
+					{
 						LogS << "Solution found; Submitting to pool" << ((nextDevFeeSwitch >= 0) ? "" : " on the dev account");
+						workRPC.submitWorkPool(solution, hash, challenge, difficulty);
+					}
 					else
+					{
 						LogB << "Solution found; Submitting to node";
-					workRPC.submitWork(solution, hash, challenge);
+						workRPC.submitWorkSolo(solution, hash, challenge);
+					}
 					f.solutionFound(SolutionState::Accepted, false, solutionMiner);
 				} else {
 					LogB << "Solution found, but invalid.  Possibly stale.";
@@ -975,6 +1037,7 @@ private:
 	/// Mining options
 	MinerType m_minerType = MinerType::Undefined;
 	OperationMode m_opMode = OperationMode::None;
+	int m_minutesPerShare = 2;	  // set to -1 to use pool difficulty
 	unsigned m_openclPlatform = 0;
 	unsigned m_openclDevice = 0;
 	unsigned m_miningThreads = UINT_MAX;

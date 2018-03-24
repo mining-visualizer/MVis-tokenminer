@@ -75,7 +75,7 @@ public:
 		data.append(userAcct);
 		result = CallMethod("getMinimumShareTarget", data);
 		m_target = u256(result.asString());
-
+		
 		if (s_lastFetch.elapsedSeconds() > 20 || m_hashingAcct == "")
 		{
 			// no reason to retrieve this stuff every time.
@@ -134,22 +134,14 @@ public:
 
 	}
 
-	void submitWork(h256 _nonce, bytes _hash, bytes _challenge)
-	{
-		if (m_opMode == OperationMode::Solo)
-			submitWorkSolo(_nonce, _hash, _challenge);
-		else
-			submitWorkPool(_nonce, _hash, _challenge);
-	}
-
-	void submitWorkPool(h256 _nonce, bytes _hash, bytes _challenge)
+	void submitWorkPool(h256 _nonce, bytes _hash, bytes _challenge, uint64_t _difficulty)
 	{
 
 		Json::Value data;
 		data.append("0x" + _nonce.hex());
 		data.append(devFeeMining ? DonationAddress : userAcct);
 		data.append("0x" + toHex(_hash));
-		data.append(m_difficulty);
+		data.append(_difficulty);
 		data.append("0x" + toHex(_challenge));
 		Json::Value result = CallMethod("submitShare", data);
 		string res = result.asString();
