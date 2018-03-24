@@ -416,10 +416,25 @@ public:
 			exit(-1);
 		}
 		string mAcct = ProgOpt::Get("0xBitcoin", "MinerAcct");
-		string notset("0x....");
-		if ("" == mAcct || notset == mAcct.substr(0, notset.length()))
+		LowerCase(mAcct);
+		u256 mAcctNum;
+		try
 		{
-			LogS << "Please set 'MinerAcct' in tokenminer.ini to a valid ETH account";
+			mAcctNum = u256(mAcct);
+		}
+		catch (...)
+		{
+			LogS << "'MinerAcct' contains invalid characters in tokenminer.ini";
+			exit(0);
+		}
+		if (mAcct.substr(0, 2) != "0x")
+		{
+			LogS << "Invalid 'MinerAcct' in tokenminer.ini - Miner account should start with '0x'";
+			exit(0);
+		}
+		if (mAcctNum == 0 || mAcct.length() != 42)
+		{
+			LogS << "Invalid 'MinerAcct' in tokenminer.ini";
 			exit(0);
 		}
 		LogD << " ";
