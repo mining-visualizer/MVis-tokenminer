@@ -170,7 +170,7 @@ public:
 		mutable SharedMutex x_hashRates;
 		std::vector<EMA> m_minerRates;
 		std::vector<float> m_lastReportedRate;	// used for delta change calculations
-		float m_farmRate;
+		float m_farmRate = 0;
 
 	};	// class HashRates
 

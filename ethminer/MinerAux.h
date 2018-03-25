@@ -745,26 +745,32 @@ private:
 
 	void calcFinalTarget(GenericFarm<EthashProofOfWork>& f, h256& _target, uint64_t& _difficulty)
 	{
+		// on input we're expecting that target and difficulty are set to the values specified by the pool.
 		static float s_lastRate = 0;
-
-		float currentRate;
 
 		// if we're going by the pool difficulty, do nothing
 		if (m_minutesPerShare == -1) return;
 
-		currentRate = f.hashRates().farmRate();
+		float currentRate = f.hashRates().farmRate();
+		LogF << "Trace: calcFinalTarget - s_lastRate : " << s_lastRate << ", farmRate : " << currentRate;
+		// the first time around we usually don't have good hash rate information yet.
 		if (s_lastRate == 0 || currentRate == 0)
-			currentRate = f.minerCount() * 500;	// assume 500 MH/s per gpu
+			currentRate = f.minerCount() * 400;	// take a guess at hash rates
 
 		// only recalculate if change is > 10%
-		if (abs(s_lastRate - currentRate) / s_lastRate > 0.1)
+		if (s_lastRate == 0 || abs(s_lastRate - currentRate) / s_lastRate > 0.1)
+		{
 			s_lastRate = currentRate;
+			LogF << "Trace: calcFinalTarget - New s_lastRate : " << s_lastRate;
+		}
 
 		double divisor = s_lastRate * 1000000.0 * m_minutesPerShare * 60;
 		uint64_t target64 = (divisor == 0) ? 0 : ~uint64_t(0) / divisor;
 		u256 target256 = target64;
 		_target = target256 << 192;
 		_difficulty = diffFromTarget(_target);
+		LogF << "Trace: calcFinalTarget - Target : " << std::hex << std::setw(16) << std::setfill('0') << upper64OfHash(_target)
+			<< ", difficulty : " << std::dec << _difficulty;
 	}
 
 
