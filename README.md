@@ -192,7 +192,7 @@ cmake -G "Visual Studio 12 2013 Win64" ..
 
 ### Building on Ubuntu
 
-Ubuntu, OpenCL only (**for AMD cards**)
+Ubuntu 16.04, OpenCL only (**for AMD cards**)
 
 ```bash
 sudo apt-get update
