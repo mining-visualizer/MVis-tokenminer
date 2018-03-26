@@ -720,11 +720,11 @@ private:
 		if (_opMode == OperationMode::Solo)
 		{
 			LogXY(1, 2) << "Block #: " << f.currentBlock << " | Block time: " << elapsedSeconds(lastBlockTime)
-						<< " | Solutions: " << f.getSolutionStats().getAccepts() << " | Tokens: " << tokenBalance;
+						<< " | Solutions: " << f.getSolutionStats().getAccepts() << " | Tokens: " << tokenBalance << "      ";
 		} 
 		else
 		{
-			LogXY(1, 2) << "Difficulty: " << _difficulty << " | Shares: " << f.getSolutionStats().getAccepts() << " | Tokens: " << tokenBalance;
+			LogXY(1, 2) << "Difficulty: " << _difficulty << " | Shares: " << f.getSolutionStats().getAccepts() << " | Tokens: " << tokenBalance << "      ";
 		}
 	}
 
@@ -858,7 +858,8 @@ private:
 							int blkNum = 0;
 							try
 							{
-								blkNum = nodeRPC->getBlockNumber() + 1;
+								if (m_opMode == OperationMode::Solo)
+									blkNum = nodeRPC->getBlockNumber() + 1;
 							}
 							catch (...) {}
 							if (blkNum != 0 && blkNum != f.currentBlock)
