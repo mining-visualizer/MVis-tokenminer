@@ -936,13 +936,13 @@ private:
 					{
 						if (nextDevFeeSwitch < 0)
 						{
-							LogB << "Switching to user mining.  Your contributions are appreciated!!";
+							LogB << "Switching to user mining.  Thank-you for your support!!";
 							nextDevFeeSwitch = userFeeTime;
 							workRPC.devFeeMining = false;
 						} 
 						else
 						{
-							LogB << "Switching to dev fee mining.  Thank-you for your support!!";
+							LogB << "Switching to dev fee mining.  Your contributions are appreciated!!";
 							nextDevFeeSwitch = (-1) * devFeeTime;
 							workRPC.devFeeMining = true;
 						}

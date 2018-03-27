@@ -89,7 +89,9 @@ public:
 		_target = m_target;
 		_difficulty = m_difficulty;
 		_hashingAcct = m_hashingAcct;
-
+		LogF << "Trace: getWorkPool - challenge:" << toHex(_challenge).substr(0, 8) 
+			<< ", target:" << std::hex << std::setw(16) << std::setfill('0') << upper64OfHash(_target) 
+			<< ", difficulty:" << std::dec << _difficulty;
 	}
 
 	void getWorkSolo(bytes& _challenge, h256& _target) throw (jsonrpc::JsonRpcException)
