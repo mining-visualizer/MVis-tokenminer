@@ -548,6 +548,8 @@ public:
 					else
 						doFarm(f, m_nodes[i].url, m_nodes[i].rpcPort);
 				}
+				if (f.shutDown)
+					break;
 				LogB << "Switching to failover node";
 				i = ++i % 2;
 			}
