@@ -775,6 +775,29 @@ private:
 			<< ", difficulty : " << std::dec << _difficulty;
 	}
 
+	/*-----------------------------------------------------------------------------------
+	* calcDevFeeTimes
+	*----------------------------------------------------------------------------------*/
+	void calcDevFeeTimes(int& _nextDevFeeSwitch, int& _userFeeTime, int& _devFeeTime)
+	{
+		#define FEEBLOCKTIME 4 * 60 * 60		// devFee switching is done in 4 hour blocks
+
+		string sDevPercent = ProgOpt::Get("General", "DevFee", "2.0");
+		if (!isNumeric(sDevPercent))
+		{
+			LogB << "Invalid DevFee in tokenminer.ini!  Defaulting to 2%.";
+			sDevPercent = "2.0";
+		}
+		_devFeeTime = std::stod(sDevPercent) / 100.0 * FEEBLOCKTIME;
+		if (_devFeeTime < 0)
+		{
+			LogB << "Invalid DevFee in tokenminer.ini!  Defaulting to 2%.";
+			_devFeeTime = 2.0 / 100.0 * FEEBLOCKTIME;
+		}
+		_userFeeTime = FEEBLOCKTIME - _devFeeTime;
+		_nextDevFeeSwitch = _devFeeTime == 0 ? 0 : _userFeeTime;
+
+	}
 
 	/*-----------------------------------------------------------------------------------
 	* doFarm
@@ -787,26 +810,14 @@ private:
 		Timer lastGetWork;
 		Timer lastCheckTx;
 		Timer devFeeSwitch;
-
-		#define FEEBLOCKTIME 4 * 60 * 60		// devFee switching is done in 4 hour blocks
-
-		string sDevPercent = ProgOpt::Get("General", "DevFee", "2.0");
-		if (!isNumeric(sDevPercent))
-		{
-			LogB << "Invalid DevFee in tokenminer.ini!  Defaulting to 2%.";
-			sDevPercent = "2.0";
-		}
-		int devFeeTime = std::stod(sDevPercent) / 100.0 * FEEBLOCKTIME;
-		if (devFeeTime < 0)
-		{
-			LogB << "Invalid DevFee in tokenminer.ini!  Defaulting to 2%.";
-			devFeeTime = 2.0 / 100.0 * FEEBLOCKTIME;
-		}
-		int userFeeTime = FEEBLOCKTIME - devFeeTime;
 		// the absolute value of nextDevFeeSwitch is the time until the next switch.
 		// if the value is >= 0, that means we are currently mining to the user's account,
 		// if it's negative, we are mining to the dev account.
-		int nextDevFeeSwitch = devFeeTime == 0 ? 0 : userFeeTime;
+		int nextDevFeeSwitch;
+		// the amount of time to spend mining for the user/dev respectively
+		int userFeeTime, devFeeTime;
+
+		calcDevFeeTimes(nextDevFeeSwitch, userFeeTime, devFeeTime);
 
 		unsigned farmRetries = 0;
 		int maxRetries = failOverAvailable() ? m_maxFarmRetries : c_StopWorkAt;
