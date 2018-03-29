@@ -900,6 +900,7 @@ private:
 							workRPC.getWorkSolo(_challenge, _target);
 						lastGetWork.restart();
 
+						// if we're choosing our own difficulty instead of using the pools, calcFinalTarget will make the adjustment
 						calcFinalTarget(f, _target, difficulty);
 
 						if (!connectedToNode)
@@ -935,7 +936,7 @@ private:
 						}
 					}
 
-					if (lastCheckTx.elapsedMilliseconds() > 1000)
+					if (lastCheckTx.elapsedMilliseconds() > 1000 && m_opMode == OperationMode::Solo)
 					{
 						nodeRPC->checkPendingTransactions();
 						if (gasPriceBidding)
