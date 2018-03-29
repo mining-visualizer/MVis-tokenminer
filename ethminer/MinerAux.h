@@ -451,7 +451,9 @@ public:
 				m_minutesPerShare = 2;
 			}
 		}
-
+		// this is intended to force a specific difficulty level. useful during development & testing, not recommended for the user.
+		string diff = ProgOpt::Get("0xBitcoin", "_Difficulty_", "-1");
+		m_difficulty = strToInt(diff, -1);
 
 		LogD << " ";
 		LogD << "--- Program Start ---";
@@ -745,6 +747,9 @@ private:
 		return static_cast<uint64_t>(t);
 	}
 
+	/*-----------------------------------------------------------------------------------
+	* calcFinalTarget
+	*----------------------------------------------------------------------------------*/
 	void calcFinalTarget(GenericFarm<EthashProofOfWork>& f, h256& _target, uint64_t& _difficulty)
 	{
 		// on input we're expecting that target and difficulty are set to the values specified by the pool.
@@ -753,24 +758,33 @@ private:
 		// if we're going by the pool difficulty, do nothing
 		if (m_minutesPerShare == -1) return;
 
-		float currentRate = f.hashRates().farmRate();
-		LogF << "Trace: calcFinalTarget - s_lastRate : " << s_lastRate << ", farmRate : " << currentRate;
-		// the first time around we usually don't have good hash rate information yet.
-		if (s_lastRate == 0 || currentRate == 0)
-			currentRate = f.minerCount() * 400;	// take a guess at hash rates
-
-		// only recalculate if change is > 10%
-		if (s_lastRate == 0 || abs(s_lastRate - currentRate) / s_lastRate > 0.1)
+		if (m_difficulty != -1)
 		{
-			s_lastRate = currentRate;
-			LogF << "Trace: calcFinalTarget - New s_lastRate : " << s_lastRate;
+			_difficulty = m_difficulty;
+			_target = targetFromDiff(_difficulty);
+		}
+		else
+		{
+			float currentRate = f.hashRates().farmRate();
+			LogF << "Trace: calcFinalTarget - s_lastRate : " << s_lastRate << ", farmRate : " << currentRate;
+			// the first time around we usually don't have good hash rate information yet.
+			if (s_lastRate == 0 || currentRate == 0)
+				currentRate = f.minerCount() * 400;	// take a guess at hash rates
+
+			// only recalculate if change is > 10%
+			if (s_lastRate == 0 || abs(s_lastRate - currentRate) / s_lastRate > 0.1)
+			{
+				s_lastRate = currentRate;
+				LogF << "Trace: calcFinalTarget - New s_lastRate : " << s_lastRate;
+			}
+
+			double divisor = s_lastRate * 1000000.0 * m_minutesPerShare * 60;
+			uint64_t target64 = (divisor == 0) ? 0 : ~uint64_t(0) / divisor;
+			u256 target256 = target64;
+			_target = target256 << 192;
+			_difficulty = diffFromTarget(_target);
 		}
 
-		double divisor = s_lastRate * 1000000.0 * m_minutesPerShare * 60;
-		uint64_t target64 = (divisor == 0) ? 0 : ~uint64_t(0) / divisor;
-		u256 target256 = target64;
-		_target = target256 << 192;
-		_difficulty = diffFromTarget(_target);
 		LogF << "Trace: calcFinalTarget - Target : " << std::hex << std::setw(16) << std::setfill('0') << upper64OfHash(_target)
 			<< ", difficulty : " << std::dec << _difficulty;
 	}
@@ -1059,6 +1073,7 @@ private:
 	MinerType m_minerType = MinerType::Undefined;
 	OperationMode m_opMode = OperationMode::None;
 	int m_minutesPerShare = 2;	  // set to -1 to use pool difficulty
+	int m_difficulty = -1;		  // useful during development & testing
 	unsigned m_openclPlatform = 0;
 	unsigned m_openclDevice = 0;
 	unsigned m_miningThreads = UINT_MAX;
