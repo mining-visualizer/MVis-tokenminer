@@ -171,7 +171,7 @@ ShutDown=20
 
 ### Building on Windows
 
-- download and install **Visual Studio 2015**
+- download and install **Visual Studio 2015**.  This project requires the v120 toolset.  See this [Stack Overflow question](https://stackoverflow.com/questions/42669153/using-v120-platform-toolset-in-visual-studio-2015) to make sure the v120 toolset gets installed onto your system.
 - download and install **CMake**
 - download or clone this repository into a folder. Let's call it `<mvis_folder>`.
 - run `getstuff.bat` in the extdep folder.
