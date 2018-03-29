@@ -873,7 +873,7 @@ private:
 							lastHashRateDisplay.restart();
 						}
 					}
-					if (lastBalanceCheck.elapsedSeconds() >= 10)
+					if (lastBalanceCheck.elapsedSeconds() >= 60)
 					{
 						tokenBalance = nodeRPC->tokenBalance();
 						lastBalanceCheck.restart();
