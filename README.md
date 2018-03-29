@@ -23,9 +23,10 @@ This is a fork of my MVis-ethminer program, which was a fork of Genoil's ethmine
     * You can specify the address and port of your node in the `.ini` file, or on the command line.
     * You can enable gas price bidding.  (see comments in the file).  Note that enabling this feature does not guarantee that you will win every bid.  Network latency will sometimes result in failed transactions, even if you 'out-bid' the other transaction.
 * Windows Only: download and install **both** the [VC 2013 Redistributable](https://www.microsoft.com/en-ca/download/details.aspx?id=40784) and the [VC 2015 Redistributable](https://www.microsoft.com/en-ca/download/details.aspx?id=48145)
-* Open a command prompt in the folder containing tokenminer.exe and type `tokenminer.exe --list-devices -G`.  Verify your GPU's are recognized.  Pay special attention to the PlatformID.  If it is anything other than 0, you will need to add `--opencl-platform <n>` to your command line.
-* Start POOL MINING with `tokenminer.exe -P -G`.  This assumes you've specified the pool mining address in the .INI file.  You could also specify the mining pool on the command line.  For instance, `tokenminer.exe -P -G -N http://your_mining_pool.com:8586`  (all one line)
+* Double-click on the file `list-devices.bat` that is located in the tokenminer folder of the download package.  Examine the screen output and verify your GPU's are recognized.  Pay special attention to the PlatformID.  If it is anything other than 0, you will need to edit the `start-mining.bat` file and change the `--opencl-platform <n>` argument.
+* Start POOL MINING by double-clicking on `start-mining.bat`.
 * Start SOLO MINING with `tokenminer.exe -S -G`.  This assumes you've specified the node address in the .INI file.
+* **COOLING**: Please note that MVis-tokenminer does not have any features to set fan speeds or regulate cooling, other than shutting down if things get too hot.  Usually the AMD drivers do a pretty good job in that regard, but sometimes they don't.  It is your responsibility to monitor your fan speeds and GPU temperatures. If the AMD drivers aren't setting fan speeds high enough, you may need to use a 3rd part product,  like Speedfan or Afterburner.
 
 #### Configuration Details ####
 
