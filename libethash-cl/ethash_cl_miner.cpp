@@ -285,7 +285,9 @@ void ethash_cl_miner::listDevices()
 	stringstream output;
 
 	// list platforms
-	output << endl << endl << "OpenCL Platforms: [PlatformID] Platform Name " << endl;
+	output << endl << endl;
+	output << "OPENCL PLATFORMS:" << endl;
+	output << "[PlatformID] Platform Name " << endl;
 	output << "------------------------------------------------------" << endl;
 
 	vector<cl::Platform> platforms = getPlatforms();
@@ -297,7 +299,9 @@ void ethash_cl_miner::listDevices()
 			output << "[" << p << "]  " << platforms[p].getInfo<CL_PLATFORM_VENDOR>() << endl;
 
 		// list devices
-		output << endl << "OpenCL Devices: [PlatformID, DeviceID] Device Name" << endl;
+		output << endl;
+		output << "OPENCL DEVICES:" << endl;
+		output << "[PlatformID, DeviceID] Device Name" << endl;
 		output << "------------------------------------------------------" << endl;
 		for (unsigned p = 0; p < platforms.size(); ++p)
 		{
@@ -305,7 +309,7 @@ void ethash_cl_miner::listDevices()
 			for (unsigned i = 0; i < devices.size(); ++i)
 			{
 				output << "[" << p << ", " << i << "] " << devices[i].getInfo<CL_DEVICE_NAME>() << endl;
-				output << "\tCL_DEVICE_TYPE: ";
+				output << "\tDEVICE_TYPE: ";
 				switch (devices[i].getInfo<CL_DEVICE_TYPE>())
 				{
 					case CL_DEVICE_TYPE_CPU:
@@ -321,10 +325,10 @@ void ethash_cl_miner::listDevices()
 						output << "DEFAULT" << endl;
 						break;
 				}
-				output << "\tCL_DEVICE_GLOBAL_MEM_SIZE: " << devices[i].getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>() << endl;
-				output << "\tCL_DEVICE_MAX_MEM_ALLOC_SIZE: " << devices[i].getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>() << endl;
-				output << "\tCL_DEVICE_MAX_WORK_GROUP_SIZE: " << devices[i].getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() << endl;
-				output << "\tCL_DEVICE_MAX_COMPUTE_UNITS: " << devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() << endl;
+				output << "\tGLOBAL_MEM_SIZE: " << devices[i].getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>() << endl;
+				output << "\tMAX_MEM_ALLOC_SIZE: " << devices[i].getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>() << endl;
+				output << "\tMAX_WORK_GROUP_SIZE: " << devices[i].getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() << endl;
+				output << "\tMAX_COMPUTE_UNITS: " << devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() << endl;
 			}
 		}
 	}
