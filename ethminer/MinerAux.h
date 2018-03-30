@@ -988,6 +988,7 @@ private:
 					if (m_opMode == OperationMode::Pool)
 					{
 						LogS << "Solution found; Submitting to pool" << ((nextDevFeeSwitch >= 0) ? "" : " on the dev account");
+						LogD << "Solution found: challenge = " << toHex(challenge).substr(0, 8) << ", nonce = " << solution.hex().substr(0, 8);
 						workRPC.submitWorkPool(solution, hash, challenge, difficulty);
 					}
 					else
