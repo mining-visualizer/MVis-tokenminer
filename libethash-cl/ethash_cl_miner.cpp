@@ -412,21 +412,21 @@ void ethash_cl_miner::testHashes() {
 		cl::Kernel testKeccak(program, "test_keccak");
 
 		// challenge
-		cl::Buffer challengeBuff = cl::Buffer(m_context, CL_MEM_READ_WRITE, 32);
+		cl::Buffer challengeBuff = cl::Buffer(m_context, CL_MEM_READ_ONLY, 32);
 		m_queue[0].enqueueWriteBuffer(challengeBuff, CL_TRUE, 0, 32, challenge.data());
 		testKeccak.setArg(0, challengeBuff);
 
 		// sender
-		cl::Buffer senderBuff = cl::Buffer(m_context, CL_MEM_READ_WRITE, 20);
+		cl::Buffer senderBuff = cl::Buffer(m_context, CL_MEM_READ_ONLY, 20);
 		m_queue[0].enqueueWriteBuffer(senderBuff, CL_TRUE, 0, 20, sender.data());
 		testKeccak.setArg(1, senderBuff);
 
 		// nonce
-		cl::Buffer nonceBuff = cl::Buffer(m_context, CL_MEM_READ_WRITE, 32);
+		cl::Buffer nonceBuff = cl::Buffer(m_context, CL_MEM_READ_ONLY, 32);
 		m_queue[0].enqueueWriteBuffer(nonceBuff, CL_TRUE, 0, 32, nonce.data());
 		testKeccak.setArg(2, nonceBuff);
 
-		cl::Buffer hashBuff = cl::Buffer(m_context, CL_MEM_WRITE_ONLY, 32);
+		cl::Buffer hashBuff = cl::Buffer(m_context, CL_MEM_READ_WRITE, 32);
 		testKeccak.setArg(3, hashBuff);
 		testKeccak.setArg(4, ~0u);
 
@@ -438,7 +438,7 @@ void ethash_cl_miner::testHashes() {
 		// now compute the hash on the CPU host and compare
 		uint32_t* mix;
 		mix = (uint32_t*)nonce.data();
-		mix[13] = 6;	// the kernel does this, so we do it too
+		mix[0] = 6;	// the kernel does this, so we do it too
 		bytes hash(32);
 		keccak256_0xBitcoin(challenge, sender, nonce, hash);
 		if (hash != kernelhash) {
