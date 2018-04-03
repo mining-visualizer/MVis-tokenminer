@@ -65,7 +65,6 @@ public:
 		}
 	}
 	void setThrottle(int _percent);
-	static void exportDAG(unsigned _block);
 	void checkHash(uint64_t _hash, uint64_t _nonce, h256 _header);
 
 protected:

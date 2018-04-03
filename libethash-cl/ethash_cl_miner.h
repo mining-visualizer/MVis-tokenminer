@@ -63,13 +63,9 @@ public:
 		uint64_t _currentBlock
 	);
 
-	bool verifyHashes();
-	void testHashes();
+	void verifyHashes();
 	bool buildBinary(cl::Device& _device, std::string &_outfile);
 	bool init(unsigned _platformId, unsigned _deviceId);
-	void exportDAG(std::string _seedhash);
-	void generateDAG(uint32_t nodes);
-	bool verifyDAG(ethash_light_t _light, uint32_t _nodes);
 	void finish();
 	void search(bytes _challenge, uint64_t _target, h160 _miningAccount, search_hook& _hook);
 	void setThrottle(int _percent);

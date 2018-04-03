@@ -287,21 +287,4 @@ void EthashGPUMiner::setThrottle(int _percent)
 	}
 }
 
-void dev::eth::EthashGPUMiner::exportDAG(unsigned _block) 
-{
-	ethash_cl_miner* miner = new ethash_cl_miner(NULL);
-
-	h256 seedHash = EthashAux::seedHash(_block);
-
-	EthashAux::LightType light;
-	light = EthashAux::light(seedHash);
-	bytesConstRef lightData = light->data();
-
-	if (!miner->init(s_platformId, 0))
-		throw cl::Error(-1, "cl_miner.init failed!");
-
-	miner->exportDAG(seedHash.hex().substr(0, 16));
-
-}
-
 #endif
