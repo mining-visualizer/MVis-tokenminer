@@ -858,7 +858,7 @@ private:
 		h256 target;
 		bytes challenge;
 		deque<bytes> recentChallenges;
-		uint64_t difficulty;
+		uint64_t difficulty = 0;
 
 		int tokenBalance = nodeRPC->tokenBalance();
 
@@ -909,13 +909,15 @@ private:
 					if (lastGetWork.elapsedMilliseconds() > m_pollingInterval || !connectedToNode)
 					{
 						if (m_opMode == OperationMode::Pool)
+						{
 							workRPC.getWorkPool(_challenge, _target, difficulty, f.hashingAcct);
+							// if we're choosing our own difficulty instead of using the pools, calcFinalTarget will make the adjustment
+							calcFinalTarget(f, _target, difficulty);
+						}
 						else
 							workRPC.getWorkSolo(_challenge, _target);
-						lastGetWork.restart();
 
-						// if we're choosing our own difficulty instead of using the pools, calcFinalTarget will make the adjustment
-						calcFinalTarget(f, _target, difficulty);
+						lastGetWork.restart();
 
 						if (!connectedToNode)
 						{
