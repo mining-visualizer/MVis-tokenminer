@@ -37,11 +37,6 @@
 #define HASHES_PER_LOOP (GROUP_SIZE / THREADS_PER_HASH)
 #define FNV_PRIME	0x01000193
 
-typedef struct
-{
-	uint solutions[MAX_OUTPUTS + 1];
-	ulong hashes[2];		// 0=arbitrary hash, 1=best hash
-} search_results_t;
 
 __constant uint2 const Keccak_f1600_RC[24] = {
 	(uint2)(0x00000001, 0x00000000),
@@ -323,53 +318,6 @@ static void keccak_f1600_no_absorb(uint2* a, uint rounds, uint isolate)
 	} 
 }
 
-/*-----------------------------------------------------------------------------------
-* fnv
-*----------------------------------------------------------------------------------*/
-static uint fnv(uint x, uint y)
-{
-	return x * FNV_PRIME ^ y;
-}
-
-/*-----------------------------------------------------------------------------------
-* fnv2
-*----------------------------------------------------------------------------------*/
-static uint2 fnv2(uint2 x, uint2 y)
-{
-	return x * FNV_PRIME ^ y;
-}
-
-/*-----------------------------------------------------------------------------------
-* fnv4
-*----------------------------------------------------------------------------------*/
-static uint4 fnv4(uint4 x, uint4 y)
-{
-	return x * FNV_PRIME ^ y;
-}
-
-/*-----------------------------------------------------------------------------------
-* fnv_reduce
-*----------------------------------------------------------------------------------*/
-static uint fnv_reduce(uint4 v)
-{
-	return fnv(fnv(fnv(v.x, v.y), v.z), v.w);
-}
-
-typedef struct
-{
-	ulong ulongs[20 / sizeof(ulong)];
-} hash20_t;
-
-typedef struct
-{
-	ulong ulongs[32 / sizeof(ulong)];
-} hash32_t;
-
-typedef union {
-	uint	 words[64 / sizeof(uint)];
-	uint2	 uint2s[64 / sizeof(uint2)];
-	uint4	 uint4s[64 / sizeof(uint4)];
-} hash64_t;
 
 typedef union {
 	uchar	 uchars[200 / sizeof(uchar)];
@@ -379,18 +327,6 @@ typedef union {
 	ulong	 ulongs[200 / sizeof(ulong)];
 } hash200_t;
 
-typedef union
-{
-	uint2 uint2s[128 / sizeof(uint2)];
-	uint4 uint4s[128 / sizeof(uint4)];
-} hash128_t;
-
-typedef union {
-	uint2 uint2s[8];
-	uint4 uint4s[4];
-	ulong ulongs[8];
-	uint  uints[16];
-} compute_hash_share;
 
 
 /*-----------------------------------------------------------------------------------
@@ -438,7 +374,7 @@ __kernel void bitcoin0x_search(
 	__constant uchar const* g_challenge,		// 32 bytes	
 	__constant uint const* g_sender,			// 20 bytes (5 uints)
 	__constant uint const* g_nonce,				// 32 bytes (8 uints)
-	__global volatile search_results_t* restrict g_output,	
+	__global volatile uint* restrict g_output,	
 	ulong target,
 	uint isolate,
 	__global volatile hash200_t* restrict g_buff		// 200 bytes,	used for debugging
@@ -468,8 +404,8 @@ __kernel void bitcoin0x_search(
 	__private ulong ulhash = as_ulong(as_uchar8(state.ulongs[0]).s76543210);
 
 	if (ulhash < target) {
-		uint slot = min(MAX_OUTPUTS, atomic_inc(&g_output->solutions[0]) + 1);
-		g_output->solutions[slot] = gid;
+		uint slot = min(MAX_OUTPUTS, atomic_inc(&g_output[0]) + 1);
+		g_output[slot] = gid;
 	}
 
 
