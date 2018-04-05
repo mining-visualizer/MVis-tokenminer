@@ -178,6 +178,13 @@ static void chi(uint2 * a, const uint n, const uint2 * t)
 	a[n+4] = bitselect(t[n + 4] ^ t[n + 1], t[n + 4], t[n + 0]);
 }
 
+/*-----------------------------------------------------------------------------------
+* chi_1
+*----------------------------------------------------------------------------------*/
+static uint2 chi_1(uint2 a, uint2 b, uint2 c)
+{
+	return bitselect(a ^ c, a, b);
+}
 
 /*-----------------------------------------------------------------------------------
 * keccak_f1600_round
@@ -268,15 +275,39 @@ static void keccak_f1600_round(uint2* a, uint r)
 	chi(a, 20, t);
 }
 
+/*-----------------------------------------------------------------------------------
+*                keccak_final_round
+*----------------------------------------------------------------------------------*/
+static void keccak_final_round(uint2* a)
+{
+	uint2 t[5];
+
+	t[0] = a[0] ^ a[5] ^ a[10] ^ a[15] ^ a[20];
+	t[1] = a[1] ^ a[6] ^ a[11] ^ a[16] ^ a[21];
+	t[2] = a[2] ^ a[7] ^ a[12] ^ a[17] ^ a[22];
+	t[3] = a[3] ^ a[8] ^ a[13] ^ a[18] ^ a[23];
+	t[4] = a[4] ^ a[9] ^ a[14] ^ a[19] ^ a[24];
+
+	a[0] ^= ROL2_small(t[1], 1) ^ t[4];
+	a[6] ^= ROL2_small(t[2], 1) ^ t[0];
+	a[12] ^= ROL2_small(t[3], 1) ^ t[1];
+
+	a[1] = ROL2_large(a[6], 44);
+	a[2] = ROL2_large(a[12], 43);
+
+	a[0] = chi_1(a[0], a[1], a[2]);
+
+	a[0] ^= Keccak_f1600_RC[23];
+}
 
 
 /*-----------------------------------------------------------------------------------
 * keccak_f1600_no_absorb
 *----------------------------------------------------------------------------------*/
-static void keccak_f1600_no_absorb(uint2* a, uint out_size, uint isolate)
+static void keccak_f1600_no_absorb(uint2* a, uint rounds, uint isolate)
 {
 	
-	for (uint r = 0; r < 24;)
+	for (uint r = 0; r < rounds;)
 	{
 		// This dynamic branch stops the AMD compiler unrolling the loop
 		// and additionally saves about 33% of the VGPRs, enough to gain another
@@ -288,7 +319,6 @@ static void keccak_f1600_no_absorb(uint2* a, uint out_size, uint isolate)
 		if (isolate)
 		{
 			keccak_f1600_round(a, r++);
-			//keccak_f1600_reduced(a, r++);
 		}
 	} 
 }
@@ -394,7 +424,7 @@ __kernel void test_keccak(
 	state.uchars[135] = 0x80;
 
 	// keccak_256
-	keccak_f1600_no_absorb((uint2*) &state, 1, isolate);
+	keccak_f1600_no_absorb((uint2*) &state, 24, isolate);
 	copy(g_output, state.words, 8);
 }
 
@@ -431,8 +461,9 @@ __kernel void bitcoin0x_search(
 	// keccak_256
 	state.uchars[84] = 0x01;
 	state.uchars[135] = 0x80;
-	keccak_f1600_no_absorb((uint2*) &state, 1, isolate);
-	
+	keccak_f1600_no_absorb((uint2*) &state, 23, isolate);
+	keccak_final_round((uint2*) &state);
+
 	// pick off upper 64 bits of hash
 	__private ulong ulhash = as_ulong(as_uchar8(state.ulongs[0]).s76543210);
 
