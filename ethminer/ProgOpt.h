@@ -18,6 +18,7 @@ along with mvis-ethereum.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <boost/property_tree/ptree.hpp>
+#include <boost/filesystem.hpp>
 #include <unordered_map>
 
 class ProgOpt
@@ -26,6 +27,7 @@ class ProgOpt
 public:
 
 	static bool Load(std::string _config);
+	static void Reload();
 	static void SaveToDisk();
 	static std::string Get(std::string _section, std::string _key, std::string _default);
 	static std::string Get(std::string _section, std::string _key);
@@ -41,5 +43,5 @@ private:
 	static boost::property_tree::iptree *m_tree;
 	static defaults_t *m_defaults;
 	static bool m_updating;
-
+	static boost::filesystem::path m_path;
 };

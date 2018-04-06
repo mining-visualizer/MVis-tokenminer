@@ -19,7 +19,6 @@ along with mvis-ethereum.  If not, see <http://www.gnu.org/licenses/>.
 #include <ethminer/ProgOpt.h>
 #include <ethminer/ini_parser_ex.hpp>
 #include <string>
-#include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <ethminer/Misc.h>
 #include <ethminer/MultiLog.h>
@@ -31,6 +30,7 @@ namespace fs = boost::filesystem;
 pt::iptree *ProgOpt::m_tree;
 bool ProgOpt::m_updating = false;
 ProgOpt::defaults_t *ProgOpt::m_defaults;
+boost::filesystem::path ProgOpt::m_path;
 
 
 bool ProgOpt::Load(std::string _config)
@@ -47,20 +47,19 @@ bool ProgOpt::Load(std::string _config)
 		return false;
 	}
 
-	fs::path path;
 	if (_config != "")
-		path = _config;
+		m_path = _config;
 	else
 	{
 		// try current folder first
-		path = getExecFolder();
-		path = path / "tokenminer.ini";
-		if (!fs::exists(path))
+		m_path = getExecFolder();
+		m_path = m_path / "tokenminer.ini";
+		if (!fs::exists(m_path))
 		{
 			// check %LocalAppData 
-			path = getAppDataFolder();
-			path = path / "tokenminer.ini";
-			if (!fs::exists(path))
+			m_path = getAppDataFolder();
+			m_path = m_path / "tokenminer.ini";
+			if (!fs::exists(m_path))
 			{
 				LogB << "Error! Tokenminer.ini settings file not found.";
 				return false;
@@ -69,7 +68,7 @@ bool ProgOpt::Load(std::string _config)
 	}
 	try
 	{
-		pt::read_ini_ex(path.generic_string(), *m_tree);
+		pt::read_ini_ex(m_path.generic_string(), *m_tree);
 		
 		// set up sensible defaults for various settings. note that emplace does
 		// not overwrite existing values.
@@ -90,11 +89,14 @@ bool ProgOpt::Load(std::string _config)
 	return true;
 }
 
+void ProgOpt::Reload()
+{
+	Load(m_path.generic_string());
+}
+
 void ProgOpt::SaveToDisk()
 {
-	fs::path path = getAppDataFolder();
-	path = path / "tokenminer.ini";
-	pt::write_ini(path.string(), *m_tree);
+	pt::write_ini(m_path.string(), *m_tree);
 }
 
 std::string ProgOpt::Get(std::string _section, std::string _key, std::string _default)

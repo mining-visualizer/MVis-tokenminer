@@ -196,7 +196,7 @@ public:
 		t.nonce = m_txNonce;
 		t.receiveAddress = toAddress(m_tokenContract);
 		t.gas = u256(200000);
-		ProgOpt::Load("");
+		ProgOpt::Reload();
 		m_startGas = atoi(ProgOpt::Get("0xBitcoin", "GasPrice").c_str());
 		m_maxGas = atoi(ProgOpt::Get("0xBitcoin", "MaxGasPrice").c_str());
 		t.gasPrice = RecommendedGasPrice(_challenge);
