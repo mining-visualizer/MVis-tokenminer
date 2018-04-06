@@ -30,3 +30,4 @@ std::string& LowerCase(std::string& _s);
 bool fileExists(std::string _path);
 void keccak256_0xBitcoin(dev::bytes _challenge, dev::h160 _sender, dev::h256 _nonce, dev::bytes& _hash);
 uint64_t HexToInt(std::string _value);
+boost::filesystem::path getExecFolder(void);

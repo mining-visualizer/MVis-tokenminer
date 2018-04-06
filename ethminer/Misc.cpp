@@ -137,3 +137,20 @@ uint64_t HexToInt(string _value)
 	ss >> x; 
 	return x;
 }
+
+// get the path to the folder this executable is running in
+filesystem::path getExecFolder(void)
+{
+#ifdef _WIN32
+
+	char buffer[MAX_PATH];
+	GetModuleFileName(NULL, buffer, MAX_PATH);
+	filesystem::path s(buffer);
+	return s.parent_path();
+
+#else
+	// needs some work here
+	throw std::exception("Misc::getExecFolder function is undefined!")
+#endif
+}
+

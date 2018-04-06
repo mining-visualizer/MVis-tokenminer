@@ -52,12 +52,19 @@ bool ProgOpt::Load(std::string _config)
 		path = _config;
 	else
 	{
-		path = getAppDataFolder();
+		// try current folder first
+		path = getExecFolder();
 		path = path / "tokenminer.ini";
 		if (!fs::exists(path))
 		{
-			LogB << "Error! Unable to read program settings from " << path.generic_string();
-			return false;
+			// check %LocalAppData 
+			path = getAppDataFolder();
+			path = path / "tokenminer.ini";
+			if (!fs::exists(path))
+			{
+				LogB << "Error! Tokenminer.ini settings file not found.";
+				return false;
+			}
 		}
 	}
 	try
