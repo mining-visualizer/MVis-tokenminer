@@ -104,7 +104,7 @@ private:
 	cl::Buffer m_searchBuffer[c_bufferCount];
 	cl::Buffer m_nonceBuffer[c_bufferCount];
 	cl::Buffer m_bestHashBuff;
-	cl::Buffer m_challenge, m_sender, m_buff;
+	cl::Buffer m_challenge, m_sender;
 	unsigned m_globalWorkSize;
 	bool m_openclOnePointOne;
 

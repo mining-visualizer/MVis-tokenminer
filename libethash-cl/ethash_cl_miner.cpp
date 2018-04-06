@@ -693,7 +693,6 @@ bool ethash_cl_miner::init(unsigned _platformId, unsigned _deviceId)
 		// buffers
 		m_challenge = cl::Buffer(m_context, CL_MEM_READ_ONLY, 32);
 		m_sender = cl::Buffer(m_context, CL_MEM_READ_ONLY, 20);
-		m_buff = cl::Buffer(m_context, CL_MEM_WRITE_ONLY, 200);		// used for debugging
 
 		for (unsigned i = 0; i != c_bufferCount; ++i)
 		{
@@ -707,7 +706,6 @@ bool ethash_cl_miner::init(unsigned _platformId, unsigned _deviceId)
 
 		m_searchKernel.setArg(1, m_sender);
 		m_searchKernel.setArg(5, ~0u);		// isolate argument
-		m_searchKernel.setArg(6, m_buff);
 	}
 	catch (cl::Error const& err)
 	{

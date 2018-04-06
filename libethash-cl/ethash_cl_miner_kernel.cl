@@ -205,6 +205,7 @@ static void keccak_f1600_round(uint2* a, uint r)
 	t[2] = a[2] ^ a[7] ^ a[12] ^ a[17] ^ a[22];
 	t[3] = a[3] ^ a[8] ^ a[13] ^ a[18] ^ a[23];
 	t[4] = a[4] ^ a[9] ^ a[14] ^ a[19] ^ a[24];
+
 	u = t[4] ^ ROL2_small(t[1], 1);
 	a[0] ^= u;
 	a[5] ^= u;
@@ -315,12 +316,7 @@ static void keccak_f1600_no_absorb(uint2* a, uint rounds, uint isolate)
 	for (uint r = 0; r < rounds;)
 	{
 		// This dynamic branch stops the AMD compiler unrolling the loop
-		// and additionally saves about 33% of the VGPRs, enough to gain another
-		// wavefront. Ideally we'd get 4 in flight, but 3 is the best I can
-		// massage out of the compiler. It doesn't really seem to matter how
-		// much we try and help the compiler save VGPRs because it seems to throw
-		// that information away, hence the implementation of keccak here
-		// doesn't bother.
+
 		//if (isolate)
 		//{
 			keccak_f1600_round(a, r++);
@@ -328,125 +324,6 @@ static void keccak_f1600_no_absorb(uint2* a, uint rounds, uint isolate)
 	} 
 }
 
-
-void keccak_alt(uint2* state, uint rounds)
-{
-	// based on code from Azlehria's 0xbitcoin miner
-	uint2 C[5], D[5];
-
-	for (uint i = 0; i < rounds; ++i)
-	{
-		C[0] = state[0] ^ state[5] ^ state[10] ^ state[15] ^ state[20];
-		C[1] = state[1] ^ state[6] ^ state[11] ^ state[16] ^ state[21];
-		C[2] = state[2] ^ state[7] ^ state[12] ^ state[17] ^ state[22];
-		C[3] = state[3] ^ state[8] ^ state[13] ^ state[18] ^ state[23];
-		C[4] = state[4] ^ state[9] ^ state[14] ^ state[19] ^ state[24];
-
-		D[0] = ROL2(C[1], 1) ^ C[4];
-		state[0] ^= D[0];
-		state[5] ^= D[0];
-		state[10] ^= D[0];
-		state[15] ^= D[0];
-		state[20] ^= D[0];
-
-		D[0] = ROL2(C[2], 1) ^ C[0];
-		state[1] ^= D[0];
-		state[6] ^= D[0];
-		state[11] ^= D[0];
-		state[16] ^= D[0];
-		state[21] ^= D[0];
-
-		D[0] = ROL2(C[3], 1) ^ C[1];
-		state[2] ^= D[0];
-		state[7] ^= D[0];
-		state[12] ^= D[0];
-		state[17] ^= D[0];
-		state[22] ^= D[0];
-
-		D[0] = ROL2(C[4], 1) ^ C[2];
-		state[3] ^= D[0];
-		state[8] ^= D[0];
-		state[13] ^= D[0];
-		state[18] ^= D[0];
-		state[23] ^= D[0];
-
-		D[0] = ROL2(C[0], 1) ^ C[3];
-		state[4] ^= D[0];
-		state[9] ^= D[0];
-		state[14] ^= D[0];
-		state[19] ^= D[0];
-		state[24] ^= D[0];
-
-		C[0] = state[1];
-		state[1] = ROL2(state[6], 44);
-		state[6] = ROL2(state[9], 20);
-		state[9] = ROL2(state[22], 61);
-		state[22] = ROL2(state[14], 39);
-		state[14] = ROL2(state[20], 18);
-		state[20] = ROL2(state[2], 62);
-		state[2] = ROL2(state[12], 43);
-		state[12] = ROL2(state[13], 25);
-		state[13] = ROL2(state[19], 8);
-		state[19] = ROL2(state[23], 56);
-		state[23] = ROL2(state[15], 41);
-		state[15] = ROL2(state[4], 27);
-		state[4] = ROL2(state[24], 14);
-		state[24] = ROL2(state[21], 2);
-		state[21] = ROL2(state[8], 55);
-		state[8] = ROL2(state[16], 45);
-		state[16] = ROL2(state[5], 36);
-		state[5] = ROL2(state[3], 28);
-		state[3] = ROL2(state[18], 21);
-		state[18] = ROL2(state[17], 15);
-		state[17] = ROL2(state[11], 10);
-		state[11] = ROL2(state[7], 6);
-		state[7] = ROL2(state[10], 3);
-		state[10] = ROL2(C[0], 1);
-
-		C[0] = state[0];
-		C[1] = state[1];
-		state[0] = chi(state[0], state[1], state[2]);
-		state[0] ^= Keccak_f1600_RC[i];
-		state[1] = chi(state[1], state[2], state[3]);
-		state[2] = chi(state[2], state[3], state[4]);
-		state[3] = chi(state[3], state[4], C[0]);
-		state[4] = chi(state[4], C[0], C[1]);
-
-		C[0] = state[5];
-		C[1] = state[6];
-		state[5] = chi(state[5], state[6], state[7]);
-		state[6] = chi(state[6], state[7], state[8]);
-		state[7] = chi(state[7], state[8], state[9]);
-		state[8] = chi(state[8], state[9], C[0]);
-		state[9] = chi(state[9], C[0], C[1]);
-
-		C[0] = state[10];
-		C[1] = state[11];
-		state[10] = chi(state[10], state[11], state[12]);
-		state[11] = chi(state[11], state[12], state[13]);
-		state[12] = chi(state[12], state[13], state[14]);
-		state[13] = chi(state[13], state[14], C[0]);
-		state[14] = chi(state[14], C[0], C[1]);
-
-		C[0] = state[15];
-		C[1] = state[16];
-		state[15] = chi(state[15], state[16], state[17]);
-		state[16] = chi(state[16], state[17], state[18]);
-		state[17] = chi(state[17], state[18], state[19]);
-		state[18] = chi(state[18], state[19], C[0]);
-		state[19] = chi(state[19], C[0], C[1]);
-
-		C[0] = state[20];
-		C[1] = state[21];
-		state[20] = chi(state[20], state[21], state[22]);
-		state[21] = chi(state[21], state[22], state[23]);
-		state[22] = chi(state[22], state[23], state[24]);
-		state[23] = chi(state[23], state[24], C[0]);
-		state[24] = chi(state[24], C[0], C[1]);
-
-	}
-
-}
 
 
 /*-----------------------------------------------------------------------------------
@@ -462,10 +339,11 @@ __kernel void test_keccak(
 	__global volatile uint* restrict g_output,	// 32 bytes (8 uints)
 	uint isolate
 ) {
-	uint const gid = get_global_id(0);
-	if (gid != 6) return;
+	// the assumption is that the kernel will be invoked with only 1 work item, since
+	// every work item writes the results to the beginning of g_ouput.
 
 	hash200_t state;
+	uint const gid = get_global_id(0);
 
 	copy(state.uchars, g_challenge, 32);
 	copy(state.words + 8, g_sender, 5);
@@ -496,8 +374,7 @@ __kernel void bitcoin0x_search(
 	__constant uint const* g_nonce,				// 32 bytes (8 uints)
 	__global volatile uint* restrict g_output,	
 	ulong target,
-	uint isolate,
-	__global volatile hash200_t* restrict g_buff		// 200 bytes,	used for debugging
+	uint isolate
 	) 
 {
 	uint const gid = get_global_id(0);
@@ -518,7 +395,6 @@ __kernel void bitcoin0x_search(
 	state.uchars[84] = 0x01;
 	state.uchars[135] = 0x80;
 	keccak_f1600_no_absorb((uint2*) &state, 24, isolate);
-	//keccak_alt((uint2*) &state, 23);
 	//keccak_final_round((uint2*) &state);
 
 	// pick off upper 64 bits of hash
