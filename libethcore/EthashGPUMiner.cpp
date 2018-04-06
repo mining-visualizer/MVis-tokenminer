@@ -272,7 +272,7 @@ bool EthashGPUMiner::configureGPU(
 			)
 	)
 	{
-		LogB << "No GPU device with sufficient memory was found. Can't GPU mine. Remove the -G argument";
+		LogB << "No GPU device with sufficient memory was found. You may need to change the --opencl-platform argument to 1.";
 		return false;
 	}
 	return true;

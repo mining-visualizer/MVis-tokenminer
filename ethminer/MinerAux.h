@@ -415,6 +415,21 @@ public:
 			LogS << "No miner type specfied.  Please include either -C (CPU mining) or -G (OpenCL mining) on the command line";
 			exit(-1);
 		}
+
+		// list devices
+		if (m_shouldListDevices)
+		{
+			if (m_minerType == MinerType::CL || m_minerType == MinerType::Mixed)
+				EthashGPUMiner::listDevices();
+#if ETH_ETHASHCUDA
+			if (m_minerType == MinerType::CUDA || m_minerType == MinerType::Mixed)
+				EthashCUDAMiner::listDevices();
+#endif
+			if (m_minerType == MinerType::CPU)
+				LogS << "--list-devices should be combined with GPU mining flag (-G for OpenCL or -U for CUDA)";
+			exit(0);
+		}
+
 		string mAcct = ProgOpt::Get("0xBitcoin", "MinerAcct");
 		LowerCase(mAcct);
 		u256 mAcctNum;
@@ -457,20 +472,6 @@ public:
 
 		LogD << " ";
 		LogD << "--- Program Start ---";
-
-		// list devices
-		if (m_shouldListDevices)
-		{
-			if (m_minerType == MinerType::CL || m_minerType == MinerType::Mixed)
-				EthashGPUMiner::listDevices();
-#if ETH_ETHASHCUDA
-			if (m_minerType == MinerType::CUDA || m_minerType == MinerType::Mixed)
-				EthashCUDAMiner::listDevices();
-#endif
-			if (m_minerType == MinerType::CPU)
-				LogS << "--list-devices should be combined with GPU mining flag (-G for OpenCL or -U for CUDA)";
-			exit(0);
-		}
 
 		if (m_opMode == OperationMode::None)
 		{
@@ -595,9 +596,10 @@ public:
 			<< "    --cl-extragpu-mem <n> Set the memory (in MB) you believe your GPU requires for stuff other than mining. default: 0" << endl
 			<< endl
 			<< " Miscellaneous Options:" << endl
-			<< "    --config <FileSpec>  - Full path to an INI file containing program options. Windows default: %LocalAppData%/tokenminer/tokenminer.ini " << endl
-			<< "                           Linux default: $HOME/.config/tokenminer/tokenminer.ini.  If this option is specified,  it must appear before " << endl
-			<< "                           all others." << endl
+			<< "    --config <FileSpec>  - Full path to an INI file containing program options. Default location is 1) the executable folder, or " << endl
+			<< "                           if not there, then in 2) %LocalAppData%/tokenminer/tokenminer.ini (Windows) or " << endl
+			<< "                           $HOME/.config/tokenminer/tokenminer.ini (Linux).  If this option is specified,  it must appear " << endl
+			<< "                           before all others. " << endl
 			;
 	}	// streamHelp
 

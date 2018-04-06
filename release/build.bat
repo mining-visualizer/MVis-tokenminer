@@ -17,7 +17,7 @@ IF ERRORLEVEL 1 GOTO ERROR
 
 
 REM Copy tokenminer.ini and Readme file 
-copy "..\tokenminer.ini" stage
+copy "..\tokenminer.ini" stage\tokenminer
 copy "..\Readme.md" stage
 
 REM Copy binaries

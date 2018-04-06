@@ -5,9 +5,9 @@ This page describes the miner for **0xBitcoin**.  For the regular ethereum miner
 
 This is a fork of my MVis-ethminer program, which was a fork of Genoil's ethminer-0.9.41-genoil-1.x.x. 
 
-* This miner is specifically designed for AMD GPUs, but seems to work well with NVidia devices as well.
+* This miner should work with any GPU that supports OpenCL, ie. pretty much all AMDs and most NVidia.
 * Windows binaries can be downloaded from the  [Releases](https://github.com/mining-visualizer/MVis-tokenminer/releases) page, or you can build from source (see below).
-* For Linux, the only option at present is to build from source.  See the instructions below.
+* For Linux, the only option at present is to build from source.  See the instructions below.  (Note: there are currently a few compile errors you will have to deal with).
 * This miner supports both pool mining and solo mining. If you want to mine solo, you either need to run your own node, or use a public one like the ones Infura provides.
 * When in pool mining mode, a user configurable dev fee is in effect.  It defaults to 2%.  See the Donations section below for instructions to change this.
 
@@ -15,15 +15,15 @@ This is a fork of my MVis-ethminer program, which was a fork of Genoil's ethmine
 ### Installation
 
 * Unzip the [download package](https://github.com/mining-visualizer/MVis-tokenminer/releases) anywhere you like.  
-* Move `tokenminer.ini` to `C:\Users\[USER]\AppData\Local\tokenminer` on Windows, or `$HOME/.config/tokenminer` on Linux.  If that folder path does not exist, you will need to create it manually.
-* Open up `tokenminer.ini` using any text editor.
+* Open up `tokenminer.ini` using any text editor and set the following configuration items:
 * For POOL MINING, the main thing you need to specify in the .INI file is your ETH account address to which rewards will be paid out. Look for the line that starts with `MinerAcct=`.  You can also specify the pool mining address in the `[Node]` section, or you can do that on the command line (-N).  See below for all command line options.
 * For SOLO MINING:
     * Input an ETH account and associated private key. (Sorry about making you enter it in plain text format. Make sure it is a 'throw away' account with only the bare minimum amount of money.)
     * You can specify the address and port of your node in the `.ini` file, or on the command line.
     * You can enable gas price bidding.  (see comments in the file).  Note that enabling this feature does not guarantee that you will win every bid.  Network latency will sometimes result in failed transactions, even if you 'out-bid' the other transaction.
-* Windows Only: download and install **both** the [VC 2013 Redistributable](https://www.microsoft.com/en-ca/download/details.aspx?id=40784) and the [VC 2015 Redistributable](https://www.microsoft.com/en-ca/download/details.aspx?id=48145)
-* Double-click on the file `list-devices.bat` that is located in the tokenminer folder of the download package.  Examine the screen output and verify your GPU's are recognized.  Pay special attention to the PlatformID.  If it is anything other than 0, you will need to edit the `start-mining.bat` file and change the `--opencl-platform <n>` argument.
+* You can leave the .INI file in the executable folder,  or you can move it to `C:\Users\[USER]\AppData\Local\tokenminer` on Windows, or `$HOME/.config/tokenminer` on Linux.  If that folder path does not exist, you will need to create it manually. If for some reason that file exists at both locations, the one in the executable folder will take precedence. 
+* WINDOWS ONLY: download and install **both** the [VC 2013 Redistributable](https://www.microsoft.com/en-ca/download/details.aspx?id=40784) and the [VC 2015 Redistributable](https://www.microsoft.com/en-ca/download/details.aspx?id=48145)
+* Double-click on the file `list-devices.bat`.  Examine the screen output and verify your GPU's are recognized.  Pay special attention to the PlatformID.  If it is anything other than 0, you will need to edit the `start-mining.bat` file and change the `--opencl-platform <n>` argument.
 * Start POOL MINING by double-clicking on `start-mining.bat`.
 * Start SOLO MINING with `tokenminer.exe -S -G`.  This assumes you've specified the node address in the .INI file.
 * **COOLING**: Please note that MVis-tokenminer does not have any features to set fan speeds or regulate cooling, other than shutting down if things get too hot.  Usually the AMD drivers do a pretty good job in that regard, but sometimes they don't.  It is your responsibility to monitor your fan speeds and GPU temperatures. If the AMD drivers aren't setting fan speeds high enough, you may need to use a 3rd part product,  like Speedfan or Afterburner.
@@ -64,9 +64,10 @@ Node configuration:
     --cl-extragpu-mem <n> Set the memory (in MB) you believe your GPU requires for stuff other than mining. default: 0
 
  Miscellaneous Options:
-    --config <FileSpec>  - Full path to an INI file containing program options. Windows default: %LocalAppData%/tokenminer/tokenminer.ini 
-                           Linux default: $HOME/.config/tokenminer/tokenminer.ini.  If this option is specified,  it must appear before 
-                           all others.
+    --config <FileSpec>  - Full path to an INI file containing program options. Default location is 1) the executable folder, or 
+                           if not there, then in 2) %LocalAppData%/tokenminer/tokenminer.ini (Windows) or 
+                           $HOME/.config/tokenminer/tokenminer.ini (Linux).  If this option is specified,  it must appear 
+                           before all others.
 
  General Options:
     -V,--version  Show the version and exit.
