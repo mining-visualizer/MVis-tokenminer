@@ -38,6 +38,16 @@
 #define FNV_PRIME	0x01000193
 
 
+typedef union
+{
+	uchar	 uchars[200 / sizeof(uchar)];
+	uint	 words[200 / sizeof(uint)];
+	uint2	 uint2s[200 / sizeof(uint2)];
+	uint4	 uint4s[200 / sizeof(uint4)];
+	ulong	 ulongs[200 / sizeof(ulong)];
+} hash200_t;
+
+
 __constant uint2 const Keccak_f1600_RC[24] = {
 	(uint2)(0x00000001, 0x00000000),
 	(uint2)(0x00008082, 0x00000000),
@@ -162,9 +172,9 @@ static uint2 ROL2_large(const uint2 vv, const int r)
 #endif
 
 /*-----------------------------------------------------------------------------------
-* chi
+* chi5
 *----------------------------------------------------------------------------------*/
-static void chi(uint2 * a, const uint n, const uint2 * t)
+static void chi5(uint2 * a, const uint n, const uint2 * t)
 {
 	a[n+0] = bitselect(t[n + 0] ^ t[n + 2], t[n + 0], t[n + 1]);
 	a[n+1] = bitselect(t[n + 1] ^ t[n + 3], t[n + 1], t[n + 2]);
@@ -174,9 +184,9 @@ static void chi(uint2 * a, const uint n, const uint2 * t)
 }
 
 /*-----------------------------------------------------------------------------------
-* chi_1
+* chi
 *----------------------------------------------------------------------------------*/
-static uint2 chi_1(uint2 a, uint2 b, uint2 c)
+static uint2 chi(uint2 a, uint2 b, uint2 c)
 {
 	return bitselect(a ^ c, a, b);
 }
@@ -259,15 +269,15 @@ static void keccak_f1600_round(uint2* a, uint r)
 	t[4]  = ROL2_small(a[24], 14);
 
 	// Chi
-	chi(a, 0, t);
+	chi5(a, 0, t);
 
 	// Iota
 	a[0] ^= Keccak_f1600_RC[r];
 
-	chi(a, 5, t);
-	chi(a, 10, t);
-	chi(a, 15, t);
-	chi(a, 20, t);
+	chi5(a, 5, t);
+	chi5(a, 10, t);
+	chi5(a, 15, t);
+	chi5(a, 20, t);
 }
 
 /*-----------------------------------------------------------------------------------
@@ -290,7 +300,7 @@ static void keccak_final_round(uint2* a)
 	a[1] = ROL2_large(a[6], 44);
 	a[2] = ROL2_large(a[12], 43);
 
-	a[0] = chi_1(a[0], a[1], a[2]);
+	a[0] = chi(a[0], a[1], a[2]);
 
 	a[0] ^= Keccak_f1600_RC[23];
 }
@@ -311,22 +321,132 @@ static void keccak_f1600_no_absorb(uint2* a, uint rounds, uint isolate)
 		// much we try and help the compiler save VGPRs because it seems to throw
 		// that information away, hence the implementation of keccak here
 		// doesn't bother.
-		if (isolate)
-		{
+		//if (isolate)
+		//{
 			keccak_f1600_round(a, r++);
-		}
+		//}
 	} 
 }
 
 
-typedef union {
-	uchar	 uchars[200 / sizeof(uchar)];
-	uint	 words[200 / sizeof(uint)];
-	uint2	 uint2s[200 / sizeof(uint2)];
-	uint4	 uint4s[200 / sizeof(uint4)];
-	ulong	 ulongs[200 / sizeof(ulong)];
-} hash200_t;
+void keccak_alt(uint2* state, uint rounds)
+{
+	// based on code from Azlehria's 0xbitcoin miner
+	uint2 C[5], D[5];
 
+	for (uint i = 0; i < rounds; ++i)
+	{
+		C[0] = state[0] ^ state[5] ^ state[10] ^ state[15] ^ state[20];
+		C[1] = state[1] ^ state[6] ^ state[11] ^ state[16] ^ state[21];
+		C[2] = state[2] ^ state[7] ^ state[12] ^ state[17] ^ state[22];
+		C[3] = state[3] ^ state[8] ^ state[13] ^ state[18] ^ state[23];
+		C[4] = state[4] ^ state[9] ^ state[14] ^ state[19] ^ state[24];
+
+		D[0] = ROL2(C[1], 1) ^ C[4];
+		state[0] ^= D[0];
+		state[5] ^= D[0];
+		state[10] ^= D[0];
+		state[15] ^= D[0];
+		state[20] ^= D[0];
+
+		D[0] = ROL2(C[2], 1) ^ C[0];
+		state[1] ^= D[0];
+		state[6] ^= D[0];
+		state[11] ^= D[0];
+		state[16] ^= D[0];
+		state[21] ^= D[0];
+
+		D[0] = ROL2(C[3], 1) ^ C[1];
+		state[2] ^= D[0];
+		state[7] ^= D[0];
+		state[12] ^= D[0];
+		state[17] ^= D[0];
+		state[22] ^= D[0];
+
+		D[0] = ROL2(C[4], 1) ^ C[2];
+		state[3] ^= D[0];
+		state[8] ^= D[0];
+		state[13] ^= D[0];
+		state[18] ^= D[0];
+		state[23] ^= D[0];
+
+		D[0] = ROL2(C[0], 1) ^ C[3];
+		state[4] ^= D[0];
+		state[9] ^= D[0];
+		state[14] ^= D[0];
+		state[19] ^= D[0];
+		state[24] ^= D[0];
+
+		C[0] = state[1];
+		state[1] = ROL2(state[6], 44);
+		state[6] = ROL2(state[9], 20);
+		state[9] = ROL2(state[22], 61);
+		state[22] = ROL2(state[14], 39);
+		state[14] = ROL2(state[20], 18);
+		state[20] = ROL2(state[2], 62);
+		state[2] = ROL2(state[12], 43);
+		state[12] = ROL2(state[13], 25);
+		state[13] = ROL2(state[19], 8);
+		state[19] = ROL2(state[23], 56);
+		state[23] = ROL2(state[15], 41);
+		state[15] = ROL2(state[4], 27);
+		state[4] = ROL2(state[24], 14);
+		state[24] = ROL2(state[21], 2);
+		state[21] = ROL2(state[8], 55);
+		state[8] = ROL2(state[16], 45);
+		state[16] = ROL2(state[5], 36);
+		state[5] = ROL2(state[3], 28);
+		state[3] = ROL2(state[18], 21);
+		state[18] = ROL2(state[17], 15);
+		state[17] = ROL2(state[11], 10);
+		state[11] = ROL2(state[7], 6);
+		state[7] = ROL2(state[10], 3);
+		state[10] = ROL2(C[0], 1);
+
+		C[0] = state[0];
+		C[1] = state[1];
+		state[0] = chi(state[0], state[1], state[2]);
+		state[0] ^= Keccak_f1600_RC[i];
+		state[1] = chi(state[1], state[2], state[3]);
+		state[2] = chi(state[2], state[3], state[4]);
+		state[3] = chi(state[3], state[4], C[0]);
+		state[4] = chi(state[4], C[0], C[1]);
+
+		C[0] = state[5];
+		C[1] = state[6];
+		state[5] = chi(state[5], state[6], state[7]);
+		state[6] = chi(state[6], state[7], state[8]);
+		state[7] = chi(state[7], state[8], state[9]);
+		state[8] = chi(state[8], state[9], C[0]);
+		state[9] = chi(state[9], C[0], C[1]);
+
+		C[0] = state[10];
+		C[1] = state[11];
+		state[10] = chi(state[10], state[11], state[12]);
+		state[11] = chi(state[11], state[12], state[13]);
+		state[12] = chi(state[12], state[13], state[14]);
+		state[13] = chi(state[13], state[14], C[0]);
+		state[14] = chi(state[14], C[0], C[1]);
+
+		C[0] = state[15];
+		C[1] = state[16];
+		state[15] = chi(state[15], state[16], state[17]);
+		state[16] = chi(state[16], state[17], state[18]);
+		state[17] = chi(state[17], state[18], state[19]);
+		state[18] = chi(state[18], state[19], C[0]);
+		state[19] = chi(state[19], C[0], C[1]);
+
+		C[0] = state[20];
+		C[1] = state[21];
+		state[20] = chi(state[20], state[21], state[22]);
+		state[21] = chi(state[21], state[22], state[23]);
+		state[22] = chi(state[22], state[23], state[24]);
+		state[23] = chi(state[23], state[24], C[0]);
+		state[24] = chi(state[24], C[0], C[1]);
+
+	}
+
+}
 
 
 /*-----------------------------------------------------------------------------------
@@ -397,8 +517,9 @@ __kernel void bitcoin0x_search(
 	// keccak_256
 	state.uchars[84] = 0x01;
 	state.uchars[135] = 0x80;
-	keccak_f1600_no_absorb((uint2*) &state, 23, isolate);
-	keccak_final_round((uint2*) &state);
+	keccak_f1600_no_absorb((uint2*) &state, 24, isolate);
+	//keccak_alt((uint2*) &state, 23);
+	//keccak_final_round((uint2*) &state);
 
 	// pick off upper 64 bits of hash
 	__private ulong ulhash = as_ulong(as_uchar8(state.ulongs[0]).s76543210);
