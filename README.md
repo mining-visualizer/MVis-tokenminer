@@ -7,7 +7,7 @@ This is a fork of my MVis-ethminer program, which was a fork of Genoil's ethmine
 
 * This miner should work with any GPU that supports OpenCL, ie. pretty much all AMDs and most NVidia.
 * Windows binaries can be downloaded from the  [Releases](https://github.com/mining-visualizer/MVis-tokenminer/releases) page, or you can build from source (see below).
-* For Linux, the only option at present is to build from source.  See the instructions below.  (Note: there are currently a few compile errors you will have to deal with).
+* For Linux, the only option at present is to build from source.  See the instructions below.  
 * This miner supports both pool mining and solo mining. If you want to mine solo, you either need to run your own node, or use a public one like the ones Infura provides.
 * When in pool mining mode, a user configurable dev fee is in effect.  It defaults to 2%.  See the Donations section below for instructions to change this.
 
@@ -187,7 +187,7 @@ cmake -G "Visual Studio 12 2013 Win64" ..
 ##### Visual Studio
 
 - Use Visual Studio to open `mvis-tokenminer.sln` located in the `build` directory.
-- Visual Studio will offer to convert the project files from 2013 format to 2015 format.  **Do not accept this!!**  Click Cancel to keep the projects using the VS2013 toolset.
+- Visual Studio may offer to convert the project files from 2013 format to 2015 format.  **Do not accept this!!**  Click Cancel to keep the projects using the VS2013 toolset.
 - Set `tokenminer` as the startup project by right-clicking on it in the project pane.
 - Build. Run
 

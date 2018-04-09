@@ -138,12 +138,11 @@ public:
 
 	void submitWorkPool(h256 _nonce, bytes _hash, bytes _challenge, uint64_t _difficulty)
 	{
-
 		Json::Value data;
 		data.append("0x" + _nonce.hex());
 		data.append(devFeeMining ? DonationAddress : userAcct);
 		data.append("0x" + toHex(_hash));
-		data.append(_difficulty);
+		data.append((Json::UInt64)_difficulty);
 		data.append("0x" + toHex(_challenge));
 		Json::Value result = CallMethod("submitShare", data);
 		string res = result.asString();
