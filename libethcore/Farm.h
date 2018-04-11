@@ -515,12 +515,6 @@ public:
 			m_solutionStats.failed();
 		}
 
-		// if we're connected to MVis, inform them of the solution, otherwise log it to disk
-		if (!m_onSolutionProcessed || !m_onSolutionProcessed(currentBlock, _state, _stale, _miner))
-		{
-			logger.recordSolution(currentBlock, (int) _state, _stale, _miner);
-		}
-
 		resetBestHash();
 
 	}	// solutionFound
