@@ -138,6 +138,9 @@ public:
 
 	void submitWorkPool(h256 _nonce, bytes _hash, bytes _challenge, uint64_t _difficulty)
 	{
+		LogF << "Trace: SubmitWorkPool, challenge = " << toHex(_challenge);
+		LogF << "Trace: SubmitWorkPool, nonce = " << _nonce;
+		LogF << "Trace: SubmitWorkPool, digest = " << toHex(_hash);
 		Json::Value data;
 		data.append("0x" + _nonce.hex());
 		data.append(devFeeMining ? DonationAddress : userAcct);
