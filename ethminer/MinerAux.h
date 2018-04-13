@@ -826,10 +826,12 @@ private:
 		Timer lastGetWork;
 		Timer lastCheckTx;
 		Timer devFeeSwitch;
+
 		// the absolute value of nextDevFeeSwitch is the time until the next switch.
 		// if the value is >= 0, that means we are currently mining to the user's account,
 		// if it's negative, we are mining to the dev account.
 		int nextDevFeeSwitch;
+
 		// the amount of time to spend mining for the user/dev respectively
 		int userFeeTime, devFeeTime;
 
