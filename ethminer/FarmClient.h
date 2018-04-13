@@ -148,9 +148,9 @@ public:
 		data.append((Json::UInt64)_difficulty);
 		data.append("0x" + toHex(_challenge));
 		Json::Value result = CallMethod("submitShare", data);
-		string res = result.asString();
-		if (!result.isBool() || !result.asBool())
-			LogB << "Solution was rejected by the pool!";
+		if (!result.isString() || result.asString() != "ok")
+			LogB << "Solution was rejected by the pool! Reason : " << result.asString();
+
 	}
 
 	void submitWorkSolo(h256 _nonce, bytes _hash, bytes _challenge)
