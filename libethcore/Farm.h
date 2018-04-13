@@ -55,8 +55,6 @@ public:
 	using Solution = typename PoW::Solution;
 	using Miner = GenericMiner<PoW>;
 
-	using SolutionFound = std::function<bool(Solution const&, int)>;
-	using SolutionFoundToken = std::function<bool(h256 const&, int)>;
 	using BestHashFn = boost::function<void(uint64_t const)>;
 	using SetWorkFn = boost::function<void(uint64_t const)>;
 	using SolutionProcessedFn = boost::function<bool(unsigned, SolutionState, bool, int)>;
@@ -179,8 +177,9 @@ public:
 	/*-----------------------------------------------------------------------------------
 	* GenericFarm Constructor
 	*----------------------------------------------------------------------------------*/
-	GenericFarm() : m_onBestHash(NULL)
+	GenericFarm(OperationMode _opMode = OperationMode::None) : m_onBestHash(NULL)
 	{
+		m_opMode = _opMode;
 		m_hashRates = new HashRates(this);
 		if (ProgOpt::Get("CloseHits", "Enabled") == "1")
 		{
@@ -196,15 +195,13 @@ public:
 
 
 	/*-----------------------------------------------------------------------------------
-	* setWork_token
+	* setWork
 	*----------------------------------------------------------------------------------*/
-	void setWork_token(bytes _challenge, h256 _target)
+	void setWork(bytes _challenge, h256 _target)
 	{
 		
 		LogF << "Trace: GenericFarm::setWork, challenge=" << toHex(_challenge).substr(0, 8)
 			<< ", target=" << std::hex << std::setw(16) << std::setfill('0') << upper64OfHash(_target);
-		if (m_onSetWork)
-			m_onSetWork(upper64OfHash(_target));
 
 		WriteGuard l(x_minerWork);
 		if (_challenge == challenge && _target == target)
@@ -212,26 +209,8 @@ public:
 		challenge = _challenge;
 		target = _target;
 		for (auto const& m: m_miners)
-			m->setWork_token(challenge, target);
+			m->setWork(challenge, target);
 	}
-
-
-	/*-----------------------------------------------------------------------------------
-	* setWork
-	*----------------------------------------------------------------------------------*/
-	void setWork(WorkPackage const& _wp)
-	{
-		LogF << "Trace: GenericFarm::setWork";
-		if (m_onSetWork)
-			m_onSetWork(upper64OfHash(_wp.boundary));
-
-		WriteGuard l(x_minerWork);
-		if (_wp.headerHash == m_work.headerHash && _wp.startNonce == m_work.startNonce)
-			return;
-		m_work = _wp;
-		for (auto const& m: m_miners)
-			m->setWork(m_work);
-    }
 
 
 	/*-----------------------------------------------------------------------------------
@@ -271,7 +250,6 @@ public:
 		LogF << "Trace: GenericFarm.stop";
 		WriteGuard l(x_minerWork);
 		m_miners.clear();
-		m_work.reset();
 		m_isMining = false;
 	}
 	
@@ -289,16 +267,6 @@ public:
 	void setIsMining(bool _isMining)
 	{ 
 		m_isMining = _isMining; 
-	}
-
-	/*-----------------------------------------------------------------------------------
-	* boundary
-	*----------------------------------------------------------------------------------*/
-	h256 boundary()
-	{ 
-		// Retrieve the current boundary value.
-		ReadGuard l(x_minerWork); 
-		return m_work.boundary; 
 	}
 
 	/*-----------------------------------------------------------------------------------
@@ -463,32 +431,9 @@ public:
 	}
 
 	/*-----------------------------------------------------------------------------------
-	* onSolutionFound
+	* recordSolution
 	*----------------------------------------------------------------------------------*/
-	void onSolutionFound(SolutionFound const& _handler)
-	{
-		// set a handler for the solution found event.  typically a lambda expression in
-		// the main loop.  this event signifies that a miner has found a solution, but it
-		// has not been confirmed by the node / mining pool.
-		m_onSolutionFound = _handler;
-	}
-
-
-	/*-----------------------------------------------------------------------------------
-	* onSolutionFoundToken
-	*----------------------------------------------------------------------------------*/
-	void onSolutionFoundToken(SolutionFoundToken const& _handler) {
-		// set a handler for the solution found event.  typically a lambda expression in
-		// the main loop.  this event signifies that a miner has found a solution, but it
-		// has not been confirmed by the node / mining pool.
-		m_onSolutionFoundToken = _handler;
-	}
-
-
-	/*-----------------------------------------------------------------------------------
-	* solutionFound
-	*----------------------------------------------------------------------------------*/
-	void solutionFound(SolutionState _state, bool _stale, int _miner)
+	void recordSolution(SolutionState _state, bool _stale, int _miner)
 	{
 		// we're being notified (typically by the main loop) as to the acceptance
 		// state of a recent solution.
@@ -517,16 +462,8 @@ public:
 
 		resetBestHash();
 
-	}	// solutionFound
+	}	// recordSolution
 
-
-	/*-----------------------------------------------------------------------------------
-	* onSetWork
-	*----------------------------------------------------------------------------------*/
-	void onSetWork(SetWorkFn const& _handler)
-	{ 
-		m_onSetWork = _handler; 
-	}
 
 	/*-----------------------------------------------------------------------------------
 	* resetBestHash
@@ -547,15 +484,6 @@ public:
 		return m_solutionStats;
 	}
 	
-
-	/*-----------------------------------------------------------------------------------
-	* work
-	*----------------------------------------------------------------------------------*/
-	WorkPackage work() const
-	{ 
-		ReadGuard l(x_minerWork); 
-		return m_work; 
-	}
 
 	/*-----------------------------------------------------------------------------------
 	* minerCount
@@ -669,35 +597,6 @@ public:
 	}
 
 	/**
-	 * @brief Called from a Miner to note a WorkPackage has a solution.
-	 * @return true if the solution was good and the Farm should pause until more work is submitted.
-	 */
-	 /*-----------------------------------------------------------------------------------
-	 * submitProof
-	 *----------------------------------------------------------------------------------*/
-	bool submitProof(Solution const& _s, Miner* _m)
-	{
-		// a miner is notifying us it found a solution.  we in turn notify the main loop 
-		// (typically a lambda expression) which submits the solution to the node. the main
-		// loop will call us back on solutionFound to let us know if the solution was accepted.
-		LogF << "Trace: GenericFarm.submitProof";
-		if (m_onSolutionFound && m_onSolutionFound(_s, _m->index()))
-		{
-			if (x_minerWork.try_lock())
-			{
-				for (auto const& m : m_miners)
-					if (m != _m)
-						m->setWork();
-				m_work.reset();
-				x_minerWork.unlock();
-				return true;
-			}
-		}
-		return false;
-	}
-
-
-	/**
 	* @brief Called from a Miner to note a WorkPackage has a solution.
 	* @return true if the solution was good and the Farm should pause until more work is submitted.
 	*/
@@ -706,24 +605,60 @@ public:
 	*----------------------------------------------------------------------------------*/
 	bool submitProof(h256 _nonce, Miner* _m) 
 	{
-		// a miner is notifying us it found a solution.  we in turn notify the main loop 
-		// (typically a lambda expression) which submits the solution to the node. the main
-		// loop will call us back on solutionFound to let us know if the solution was accepted.
-		LogF << "Trace: GenericFarm.submitProof";
-		if (m_onSolutionFoundToken && m_onSolutionFoundToken(_nonce, _m->index())) {
-			if (x_minerWork.try_lock()) {
+		// return true if miner should stop and wait for new work, false otherwise
+		bool shouldStop = false;
+
+		LogF << "Trace: GenericFarm.submitProof - nonce = " << _nonce.hex().substr(0, 8) << ", miner = " << _m->index();
+
+		if (!x_minerWork.try_lock())
+		{
+			LogF << "Trace: GenericFarm.submitProof - mutex locked ... exiting";
+			return shouldStop;
+		}
+
+		// check to see if the main loop is still processing a previous solution
+		if (solutionMiner == -1)
+		{
+			LogF << "Trace: GenericFarm.submitProof - setting new solution";
+			solutionMiner = _m->index();
+			solution = _nonce;
+			if (m_opMode == OperationMode::Solo)
+			{
 				challenge.clear();
 				for (auto const& m : m_miners)
 					if (m != _m)
-						m->setWork_token(challenge, target);
-				x_minerWork.unlock();
-				return true;
-			}
+						m->setWork(challenge, target);
+				shouldStop = true;
+			} else
+				shouldStop = false;
+		} else
+		{
+			LogF << "Trace: GenericFarm.submitProof - previous solution not processed";
+			shouldStop = m_opMode == OperationMode::Solo;
 		}
-		return false;
+
+		x_minerWork.unlock();
+
+		return shouldStop;
+
 	}
 
 
+	bool solutionFound(h256& _solution, int& _miner)
+	{
+		// check if any of the miners has found a solution
+
+		WriteGuard l(x_minerWork);
+
+		if (solutionMiner != -1)
+		{
+			_miner = solutionMiner;
+			_solution = solution;
+			solutionMiner = -1;
+			return true;
+		} else
+			return false;
+	}
 
 public:
 	unsigned currentBlock;
@@ -747,9 +682,9 @@ public:
 private:
 	mutable SharedMutex x_minerWork;
 	miners_t m_miners;
-	WorkPackage m_work;
 	h256 target;
 	bytes challenge;
+	OperationMode m_opMode;
 
 	std::atomic<bool> m_isMining = {false};
 
@@ -757,10 +692,7 @@ private:
 	HashRates* m_hashRates;
 
 	// event functions
-	SolutionFound m_onSolutionFound;
-	SolutionFoundToken m_onSolutionFoundToken;
 	BestHashFn m_onBestHash;
-	SetWorkFn m_onSetWork;	
 	SolutionProcessedFn m_onSolutionProcessed;
 	CloseHitFn m_onCloseHit;
 	HashFaultFn m_onHashFault;
@@ -774,6 +706,10 @@ private:
 	unsigned m_closeHits = 0;
 	// this includes work units
 	uint64_t m_lastCloseHit;
+
+	h256 solution;
+	int solutionMiner = -1;
+
 }; 
 
 }

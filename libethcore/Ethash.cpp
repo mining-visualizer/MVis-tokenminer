@@ -190,7 +190,7 @@ void Ethash::manuallySubmitWork(SealEngineFace* _engine, h256 const& _mixHash, N
 		// Go via the farm since the handler function object is stored as a local within the Farm's lambda.
 		// Has the side effect of stopping local workers, which is good, as long as it only does it for
 		// valid submissions.
-		e->m_farm.submitProof(EthashProofOfWork::Solution{_nonce, _mixHash}, nullptr);
+		//e->m_farm.submitProof(EthashProofOfWork::Solution{_nonce, _mixHash}, nullptr);
 	}
 }
 

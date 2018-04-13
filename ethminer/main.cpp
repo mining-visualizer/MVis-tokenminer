@@ -49,14 +49,11 @@ using namespace boost::algorithm;
 
 #undef RETURN
 
-// put this here so we can access mvisRPC in CrlHandler
 MinerCLI ethminer;
 
 void shutDown() 
 {
 	LogS << "Shutting down ...";
-	if (ethminer.mvisRPC)
-		ethminer.mvisRPC->disconnect("notify");
 	ethminer.shutdown();
 	this_thread::sleep_for(chrono::milliseconds(300));
 }

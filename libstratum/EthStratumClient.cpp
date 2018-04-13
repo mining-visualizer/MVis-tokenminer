@@ -49,14 +49,14 @@ EthStratumClient::EthStratumClient(
 
 	p_farm = f;
 	
-	f->onSolutionFound([&] (EthashProofOfWork::Solution sol, int miner) {
-		m_solutionMiner = miner;
-		if (isConnected())
-			submit(sol);
-		else
-			LogB << "Can't submit solution: Not connected";
-		return false;
-	});
+	//f->onSolutionFound([&] (EthashProofOfWork::Solution sol, int miner) {
+	//	m_solutionMiner = miner;
+	//	if (isConnected())
+	//		submit(sol);
+	//	else
+	//		LogB << "Can't submit solution: Not connected";
+	//	return false;
+	//});
 
 	p_worktimer = nullptr;
 
@@ -142,7 +142,7 @@ void EthStratumClient::reconnect(string msg)
 		// if there's a failover available, we'll switch to it, but worst case scenario, it could be 
 		// unavailable as well, so at some point we should pause mining.  we'll do it here.
 		m_current.reset();
-		p_farm->setWork(m_current);
+		//p_farm->setWork(m_current);
 		LogB << "Mining paused ...";
 		if (m_failoverAvailable)
 		{
@@ -239,9 +239,9 @@ void EthStratumClient::processReponse(Json::Value& responseObject)
 		break;
 	case 4:
 		if (responseObject.get("result", false).asBool())
-			p_farm->solutionFound(SolutionState::Accepted, m_stale, m_solutionMiner);
+			p_farm->recordSolution(SolutionState::Accepted, m_stale, m_solutionMiner);
 		else
-			p_farm->solutionFound(SolutionState::Rejected, m_stale, m_solutionMiner);
+			p_farm->recordSolution(SolutionState::Rejected, m_stale, m_solutionMiner);
 		break;
 	default:
 		string method = responseObject.get("method", "").asString();
@@ -312,7 +312,7 @@ void EthStratumClient::setWork(Json::Value params)
 				LogB << "Error in EthStratumClient::setWork. Unable to convert block number. " << e.what();
 			}
 
-			p_farm->setWork(m_current);
+			//p_farm->setWork(m_current);
 			p_worktimer = new boost::asio::deadline_timer(m_io_service, boost::posix_time::seconds(m_worktimeout));
 			p_worktimer->async_wait(boost::bind(&EthStratumClient::work_timeout_handler, this, boost::asio::placeholders::error));
 		}
@@ -357,7 +357,7 @@ bool EthStratumClient::submit(EthashProofOfWork::Solution solution) {
 	}
 	else {
 		m_stale = false;
-		p_farm->solutionFound(SolutionState::Failed, NULL, m_solutionMiner);
+		p_farm->recordSolution(SolutionState::Failed, NULL, m_solutionMiner);
 	}
 
 	return false;

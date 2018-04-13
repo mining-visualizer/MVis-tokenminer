@@ -58,9 +58,9 @@ strings EthashSealEngine::sealers() const
 void EthashSealEngine::generateSeal(BlockInfo const& _bi)
 {
 	m_sealing = Ethash::BlockHeader(_bi);
-	m_farm.setWork(m_sealing);
+	//m_farm.setWork(m_sealing);
 	//m_farm.start(m_sealer, false);
-	m_farm.setWork(m_sealing);		// TODO: take out one before or one after...
+	//m_farm.setWork(m_sealing);		// TODO: take out one before or one after...
 	bytes shouldPrecompute = option("precomputeDAG");
 	if (!shouldPrecompute.empty() && shouldPrecompute[0] == 1)
 		Ethash::ensurePrecomputed((unsigned)_bi.number());
@@ -68,16 +68,16 @@ void EthashSealEngine::generateSeal(BlockInfo const& _bi)
 
 void EthashSealEngine::onSealGenerated(std::function<void(bytes const&)> const& _f)
 {
-	m_farm.onSolutionFound([=](EthashProofOfWork::Solution const& sol, int miner)
-	{
-//		cdebug << m_farm.work().seedHash << m_farm.work().headerHash << sol.nonce << EthashAux::eval(m_farm.work().seedHash, m_farm.work().headerHash, sol.nonce).value;
-		m_sealing.m_mixHash = sol.mixHash;
-		m_sealing.m_nonce = sol.nonce;
-		if (!m_sealing.preVerify())
-			return false;
-		RLPStream ret;
-		m_sealing.streamRLP(ret);
-		_f(ret.out());
-		return true;
-	});
+//	m_farm.onSolutionFound([=](EthashProofOfWork::Solution const& sol, int miner)
+//	{
+////		cdebug << m_farm.work().seedHash << m_farm.work().headerHash << sol.nonce << EthashAux::eval(m_farm.work().seedHash, m_farm.work().headerHash, sol.nonce).value;
+//		m_sealing.m_mixHash = sol.mixHash;
+//		m_sealing.m_nonce = sol.nonce;
+//		if (!m_sealing.preVerify())
+//			return false;
+//		RLPStream ret;
+//		m_sealing.streamRLP(ret);
+//		_f(ret.out());
+//		return true;
+//	});
 }

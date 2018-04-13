@@ -66,7 +66,6 @@
 #include "Misc.h"
 #include "Common.h"
 #include "MultiLog.h"
-#include "MVisRPC.h"
 
 using namespace std;
 using namespace dev;
@@ -538,7 +537,7 @@ public:
 			doBenchmark(m_minerType, m_benchmarkWarmup, m_benchmarkTrial, m_benchmarkTrials);
 		else
 		{
-			GenericFarm<EthashProofOfWork> f;
+			GenericFarm<EthashProofOfWork> f(m_opMode);
 			f.start(createMiners(m_minerType, &f));
 
 			int i = 0;
@@ -655,8 +654,7 @@ private:
 		genesis.setNumber(m_benchmarkBlock);
 		genesis.setDifficulty(1 << 18);
 
-		GenericFarm<EthashProofOfWork> f;
-		f.onSolutionFound([&](EthashProofOfWork::Solution, int) { return false; });
+		GenericFarm<EthashProofOfWork> f(m_opMode);
 
 		string platformInfo = _m == MinerType::CPU ? "CPU" : (_m == MinerType::CL ? "CL" : "CUDA");
 		LogS << "Benchmarking on platform: " << platformInfo;
@@ -664,7 +662,7 @@ private:
 		h256 target = h256(1);	
 		bytes challenge(32);
 		f.start(createMiners(_m, &f));
-		f.setWork_token(challenge, target);
+		f.setWork(challenge, target);
 
 		vector<double> results;
 		double mean = 0;
@@ -870,17 +868,10 @@ private:
 		{
 			try
 			{
-				bool solutionFound = false;
 				h256 solution;
 				int solutionMiner;
-				f.onSolutionFoundToken([&] (h256 nonce, int miner) {
-					solution = nonce;
-					solutionMiner = miner;
-					solutionFound = true;
-					return m_opMode == OperationMode::Solo;
-				});
 
-				while (!solutionFound && !f.shutDown)
+				while (!f.solutionFound(solution, solutionMiner) && !f.shutDown)
 				{
 					if (!challenge.empty())
 					{
@@ -945,14 +936,14 @@ private:
 								challenge = _challenge;
 								target = _target;
 								LogB << "New challenge : " << toHex(_challenge).substr(0, 8);
-								f.setWork_token(challenge, target);
+								f.setWork(challenge, target);
 								workRPC.setChallenge(challenge);
 							}
 						}
 						if (_target != target)
 						{
 							target = _target;
-							f.setWork_token(challenge, target);
+							f.setWork(challenge, target);
 						}
 					}
 
@@ -1002,10 +993,10 @@ private:
 						LogB << "Solution found; Submitting to node";
 						workRPC.submitWorkSolo(solution, hash, challenge);
 					}
-					f.solutionFound(SolutionState::Accepted, false, solutionMiner);
+					f.recordSolution(SolutionState::Accepted, false, solutionMiner);
 				} else {
 					LogB << "Solution found, but invalid.  Possibly stale.";
-					f.solutionFound(SolutionState::Accepted, true, solutionMiner);
+					f.recordSolution(SolutionState::Accepted, true, solutionMiner);
 				}
 			}
 			catch (jsonrpc::JsonRpcException& e)
@@ -1019,7 +1010,7 @@ private:
 					// if there's a failover available, we'll switch to it, but worst case scenario, it could be 
 					// unavailable as well, so at some point we should pause mining.  we'll do it here.
 					challenge.clear();
-					f.setWork_token(challenge, target);
+					f.setWork(challenge, target);
 					LogS << "Mining paused ...";
 					if (failOverAvailable())
 						break;
@@ -1046,7 +1037,6 @@ private:
 		// retry of zero means retry forever, since there is no failover.
 		int maxRetries = failOverAvailable() ? m_maxFarmRetries : 0;
 		EthStratumClient client(&f, m_minerType, _nodeURL, _stratumPort, _stratumPwd, maxRetries, m_worktimeout);
-		mvisRPC->configNodeRPC(_nodeURL + ":" + _rpcPort);
 
 		Timer lastHashRateDisplay;
 		Timer lastBlockTime;
@@ -1066,13 +1056,11 @@ private:
 			this_thread::sleep_for(chrono::milliseconds(200));
 		}
 
-		mvisRPC->disconnect("notify");
 
 	}	// doStratum
 
 public:
 
-	MVisRPC* mvisRPC;
 
 private:
 

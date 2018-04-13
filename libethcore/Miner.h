@@ -267,36 +267,11 @@ public:
 
 	// API FOR THE FARM TO CALL IN WITH
 
-	void setWork(WorkPackage const& _work = WorkPackage())
-	{
-		LogF << "Trace: GenericMiner::setWork, miner[" << m_index << "]";
-		auto old = m_work;
-		{
-			Guard l(x_work);
-			m_work = _work;
-		}
-		if (!!_work)
-		{
-			DEV_TIMED_ABOVE("pause", 250)
-				pause();
-			DEV_TIMED_ABOVE("kickOff", 250)
-				kickOff();
-		}
-		else if (!_work && !!old)
-			pause();
 
-		if (m_index == 0)
-			// clear out the nonces. only one miner needs to do this.
-			storeNonceIndex(0, true);
-
-		//  we'll use this as a convenient place to recalculate our work unit threshold periodically
-		calcWorkUnitThreshold();
-	}
-
-	void setWork_token(bytes _challenge, h256 _target) 
+	void setWork(bytes _challenge, h256 _target) 
 	{
 		uint64_t t = upper64OfHash(_target);
-		LogF << "Trace: GenericMiner::setWork_token, challenge = " << toHex(_challenge).substr(0, 8)
+		LogF << "Trace: GenericMiner::setWork, challenge = " << toHex(_challenge).substr(0, 8)
 			<< ", target = " << std::hex << std::setw(16) << std::setfill('0') << t << ", miner[" << m_index << "]";
 		auto old = challenge;
 		{
