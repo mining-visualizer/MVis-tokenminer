@@ -121,7 +121,7 @@ bool fileExists(std::string _path)
 	return file.good();
 }
 
-void keccak256_0xBitcoin(bytes _challenge, h160 _sender, h256 _nonce, bytes& _hash) {
+void keccak256_0xBitcoin(bytes& _challenge, h160& _sender, h256& _nonce, bytes& _hash) {
 	bytes mix(84);
 	memcpy(&mix[0], _challenge.data(), 32);
 	memcpy(&mix[32], _sender.data(), 20);
