@@ -140,7 +140,7 @@ bool EthashGPUMiner::report(h256 _nonce)
 	h160 sender(m_farm->hashingAcct);
 	bytes hash(32);
 	keccak256_0xBitcoin(challenge, sender, _nonce, hash);
-	LogF << "Trace: EthashGPUMiner::report, challenge = " << toHex(challenge) << ", sender = " << sender.hex() 
+	LogF << "Trace: EthashGPUMiner::report, challenge = " << toHex(challenge) << ", sender = " << sender.hex()
 		<< ", hash = " << toHex(hash) << ", target = " << target.hex() << ", miner[" << m_index << "]";
 	if (h256(hash) < target)
 		return submitProof(_nonce);

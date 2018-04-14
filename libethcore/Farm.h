@@ -204,12 +204,12 @@ public:
 			<< ", target=" << std::hex << std::setw(16) << std::setfill('0') << upper64OfHash(_target);
 
 		WriteGuard l(x_minerWork);
-		if (_challenge == challenge && _target == target)
+		if (_challenge == m_challenge && _target == m_target)
 			return;
-		challenge = _challenge;
-		target = _target;
+		m_challenge = _challenge;
+		m_target = _target;
 		for (auto const& m: m_miners)
-			m->setWork(challenge, target);
+			m->setWork(m_challenge, m_target);
 	}
 
 
@@ -227,7 +227,7 @@ public:
 		m_hashRates->init();
 		// can't call setWork until we've initialized the hash rates
 		//for (auto const& m : m_miners)
-		//	m->setWork_token(challenge, target);
+		//	m->setWork_token(m_challenge, m_target);
 
 		LogF << "Trace: GenericFarm.start [exit]";
 	}
@@ -605,16 +605,19 @@ public:
 	*----------------------------------------------------------------------------------*/
 	bool submitProof(h256 _nonce, Miner* _m) 
 	{
-		// return true if miner should stop and wait for new work, false otherwise
+		// return true if miner should stop and wait for new work, false to keep mining
 		bool shouldStop = false;
 
 		LogF << "Trace: GenericFarm.submitProof - nonce = " << _nonce.hex().substr(0, 8) << ", miner = " << _m->index();
 
-		if (!x_minerWork.try_lock())
-		{
-			LogF << "Trace: GenericFarm.submitProof - mutex locked ... exiting";
-			return shouldStop;
-		}
+		/*
+			we could block here if 
+			   - another miner found a solution and is submitting it
+			   - the main loop is checking if a solution has been found
+			   - setWork has been called with a new work package
+		*/
+
+		WriteGuard l(x_minerWork);
 
 		// check to see if the main loop is still processing a previous solution
 		if (solutionMiner == -1)
@@ -624,10 +627,10 @@ public:
 			solution = _nonce;
 			if (m_opMode == OperationMode::Solo)
 			{
-				challenge.clear();
+				m_challenge.clear();
 				for (auto const& m : m_miners)
 					if (m != _m)
-						m->setWork(challenge, target);
+						m->setWork(m_challenge, m_target);
 				shouldStop = true;
 			} else
 				shouldStop = false;
@@ -636,8 +639,6 @@ public:
 			LogF << "Trace: GenericFarm.submitProof - previous solution not processed";
 			shouldStop = m_opMode == OperationMode::Solo;
 		}
-
-		x_minerWork.unlock();
 
 		return shouldStop;
 
@@ -682,8 +683,8 @@ public:
 private:
 	mutable SharedMutex x_minerWork;
 	miners_t m_miners;
-	h256 target;
-	bytes challenge;
+	h256 m_target;
+	bytes m_challenge;
 	OperationMode m_opMode;
 
 	std::atomic<bool> m_isMining = {false};
