@@ -148,8 +148,10 @@ public:
 		data.append((Json::UInt64)_difficulty);
 		data.append("0x" + toHex(_challenge));
 		Json::Value result = CallMethod("submitShare", data);
-		if (!result.isString() || result.asString() != "ok")
-			LogB << "Solution was rejected by the pool! Reason : " << result.asString();
+		//if (!result.isString() || result.asString() != "ok")
+		//	LogB << "Solution was rejected by the pool! Reason : " << result.asString();
+		if (!result.isBool() || !result.asBool())
+			LogB << "Solution was rejected by the pool!";
 
 	}
 
