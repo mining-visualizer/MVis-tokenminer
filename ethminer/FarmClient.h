@@ -26,8 +26,6 @@ class FarmClient : public jsonrpc::Client
 {
 public:
 
-	const string TokenContract = "0xb6ed7644c69416d67b522e20bc294a9a9b405b31";      // 0xBitcoin
-
 	enum TxStatus
 	{
 		Succeeded,
@@ -338,7 +336,7 @@ public:
 					string toAddr = tx["to"].asString();
 					string input = tx["input"].asString();
 					// look for txs addressed to the 0xBitcoin contract that are calling the mint() function
-					if (LowerCase(toAddr) == TokenContract && input.substr(0, 10) == "0x1801fbe5") {
+					if (LowerCase(toAddr) == m_tokenContract && input.substr(0, 10) == "0x1801fbe5") {
 						CMiner miner;
 						miner.txHash = hash;
 						miner.account = tx["from"].asString();
