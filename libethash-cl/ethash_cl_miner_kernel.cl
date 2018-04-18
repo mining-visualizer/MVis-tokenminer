@@ -343,12 +343,10 @@ __kernel void test_keccak(
 	// every work item writes the results to the beginning of g_ouput.
 
 	hash200_t state;
-	uint const gid = get_global_id(0);
 
 	copy(state.uchars, g_challenge, 32);
 	copy(state.words + 8, g_sender, 5);
 	copy(state.words + 13, g_nonce, 8);
-	state.words[13] = gid;
 
 	for (uint i = 21; i != 50; ++i) {
 		state.words[i] = 0;

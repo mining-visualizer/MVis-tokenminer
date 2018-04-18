@@ -375,15 +375,12 @@ void ethash_cl_miner::verifyHashes() {
 		testKeccak.setArg(3, hashBuff);
 		testKeccak.setArg(4, ~0u);
 
-		m_queue[0].enqueueNDRangeKernel(testKeccak, cl::NullRange, 10, s_workgroupSize);
+		m_queue[0].enqueueNDRangeKernel(testKeccak, cl::NullRange, 1, s_workgroupSize);
 
 		bytes kernelhash(32);
 		m_queue[0].enqueueReadBuffer(hashBuff, CL_TRUE, 0, 32, kernelhash.data());
 
 		// now compute the hash on the CPU host and compare
-		uint32_t* mix;
-		mix = (uint32_t*)nonce.data();
-		mix[0] = 6;	// the kernel does this, so we do it too
 		bytes hash(32);
 		keccak256_0xBitcoin(challenge, sender, nonce, hash);
 		if (hash != kernelhash) {
