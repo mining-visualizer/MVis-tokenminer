@@ -606,6 +606,7 @@ public:
 	bool submitProof(h256 _nonce, Miner* _m) 
 	{
 		// return true if miner should stop and wait for new work, false to keep mining
+
 		bool shouldStop = false;
 
 		LogF << "Trace: GenericFarm.submitProof - nonce = " << _nonce.hex().substr(0, 8) << ", miner = " << _m->index();
@@ -617,7 +618,7 @@ public:
 			   - setWork has been called with a new work package
 		*/
 
-		WriteGuard l(x_minerWork);
+		Guard l(x_solution);
 
 		// check to see if the main loop is still processing a previous solution
 		if (solutionMiner == -1)
@@ -627,6 +628,7 @@ public:
 			solution = _nonce;
 			if (m_opMode == OperationMode::Solo)
 			{
+				WriteGuard lck(x_minerWork);
 				m_challenge.clear();
 				for (auto const& m : m_miners)
 					if (m != _m)
@@ -649,7 +651,7 @@ public:
 	{
 		// check if any of the miners has found a solution
 
-		WriteGuard l(x_minerWork);
+		Guard l(x_solution);
 
 		if (solutionMiner != -1)
 		{
@@ -710,6 +712,7 @@ private:
 
 	h256 solution;
 	int solutionMiner = -1;
+	mutable Mutex x_solution;
 
 }; 
 
