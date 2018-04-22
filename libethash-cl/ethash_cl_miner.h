@@ -87,7 +87,6 @@ private:
 	struct search_results
 	{
 		uint32_t solutions[c_maxSearchResults + 1];
-		uint64_t hashes[2];		// 0=random hash, 1=best hash
 	};
 
 	static std::vector<cl::Device> getDevices(std::vector<cl::Platform> const& _platforms, unsigned _platformId);
@@ -97,14 +96,8 @@ private:
 	cl::Program m_programCL, m_programBin;
 	cl::CommandQueue m_queue[c_bufferCount];
 	cl::Kernel m_searchKernel;
-	cl::Kernel m_dagKernel;
-	cl::Buffer m_dag;
-	cl::Buffer m_light;
-	cl::Buffer m_header;
 	cl::Buffer m_searchBuffer[c_bufferCount];
-	cl::Buffer m_nonceBuffer[c_bufferCount];
-	cl::Buffer m_bestHashBuff;
-	cl::Buffer m_challenge, m_sender;
+	cl::Buffer m_precompBuffer[c_bufferCount];
 	unsigned m_globalWorkSize;
 	bool m_openclOnePointOne;
 

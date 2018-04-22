@@ -343,46 +343,98 @@ void ethash_cl_miner::finish()
 			m_queue[i].finish();
 }
 
+uint64_t chi(uint64_t a, uint64_t b, uint64_t c)
+{
+	return a ^ ((~b) & c);
+}
+
+#define ROTL64(x, y) (((x) << (y)) ^ ((x) >> (64 - (y))))
+
+void keccak_precomp(uint64_t* mid, uint64_t* message)
+{
+	uint64_t C[4], D[5];
+	C[0] = message[0] ^ message[5] ^ message[10] ^ 0x100000000ull;
+	C[1] = message[1] ^ message[6] ^ 0x8000000000000000ull;
+	C[2] = message[2] ^ message[7];
+	C[3] = message[4] ^ message[9];
+
+	D[0] = ROTL64(C[1], 1) ^ C[3];
+	D[1] = ROTL64(C[2], 1) ^ C[0];
+	D[2] = ROTL64(message[3], 1) ^ C[1];
+	D[3] = ROTL64(C[3], 1) ^ C[2];
+	D[4] = ROTL64(C[0], 1) ^ message[3];
+
+	mid[0] = message[0] ^ D[0];
+	mid[1] = ROTL64(message[6] ^ D[1], 44);
+	mid[2] = ROTL64(D[2], 43);
+	mid[3] = ROTL64(D[3], 21);
+	mid[4] = ROTL64(D[4], 14);
+	mid[5] = ROTL64(message[3] ^ D[3], 28);
+	mid[6] = ROTL64(message[9] ^ D[4], 20);
+	mid[7] = ROTL64(message[10] ^ D[0] ^ 0x100000000ull, 3);
+	mid[8] = ROTL64(0x8000000000000000ull ^ D[1], 45);
+	mid[9] = ROTL64(D[2], 61);
+	mid[10] = ROTL64(message[1] ^ D[1], 1);
+	mid[11] = ROTL64(message[7] ^ D[2], 6);
+	mid[12] = ROTL64(D[3], 25);
+	mid[13] = ROTL64(D[4], 8);
+	mid[14] = ROTL64(D[0], 18);
+	mid[15] = ROTL64(message[4] ^ D[4], 27);
+	mid[16] = ROTL64(message[5] ^ D[0], 36);
+	mid[17] = ROTL64(D[1], 10);
+	mid[18] = ROTL64(D[2], 15);
+	mid[19] = ROTL64(D[3], 56);
+	mid[20] = ROTL64(message[2] ^ D[2], 62);
+	mid[21] = ROTL64(D[3], 55);
+	mid[22] = ROTL64(D[4], 39);
+	mid[23] = ROTL64(D[0], 41);
+	mid[24] = ROTL64(D[1], 2);
+
+}
+
 void ethash_cl_miner::verifyHashes() {
+
+	cl::Buffer precompBuff(m_context, CL_MEM_READ_ONLY, 200);
+	cl::Buffer output(m_context, CL_MEM_READ_WRITE, 8);
+
+	cl::Kernel testKeccak(m_programCL, "test_keccak");
+
+	testKeccak.setArg(0, precompBuff);
+	testKeccak.setArg(1, output);
 
 	for (int i = 0; i != 50; ++i) {
 
+		// fill message elements with random data
 		h256 nonce = h256::random();
 		bytes challenge(32);
 		memcpy(challenge.data(), nonce.data(), 32);
 		nonce = h256::random();
 		h160 sender = h160::random();
 
-		cl::Program program = m_programCL;
-		cl::Kernel testKeccak(program, "test_keccak");
+		uint8_t message[88] = {0};
 
-		// challenge
-		cl::Buffer challengeBuff = cl::Buffer(m_context, CL_MEM_READ_ONLY, 32);
-		m_queue[0].enqueueWriteBuffer(challengeBuff, CL_TRUE, 0, 32, challenge.data());
-		testKeccak.setArg(0, challengeBuff);
+		memcpy(&message[0], challenge.data(), 32);
+		memcpy(&message[32], sender.data(), 20);
+		memcpy(&message[52], nonce.data(), 32);
 
-		// sender
-		cl::Buffer senderBuff = cl::Buffer(m_context, CL_MEM_READ_ONLY, 20);
-		m_queue[0].enqueueWriteBuffer(senderBuff, CL_TRUE, 0, 20, sender.data());
-		testKeccak.setArg(1, senderBuff);
+		uint64_t precomp[25];
+		keccak_precomp(precomp, (uint64_t*) message);
+		m_queue[0].enqueueWriteBuffer(precompBuff, CL_TRUE, 0, 200, precomp);
 
-		// nonce
-		cl::Buffer nonceBuff = cl::Buffer(m_context, CL_MEM_READ_ONLY, 32);
-		m_queue[0].enqueueWriteBuffer(nonceBuff, CL_TRUE, 0, 32, nonce.data());
-		testKeccak.setArg(2, nonceBuff);
+		testKeccak.setArg(2, i);
 
-		cl::Buffer hashBuff = cl::Buffer(m_context, CL_MEM_READ_WRITE, 32);
-		testKeccak.setArg(3, hashBuff);
-		testKeccak.setArg(4, ~0u);
+		m_queue[0].enqueueNDRangeKernel(testKeccak, cl::NullRange, i + 1, s_workgroupSize);
 
-		m_queue[0].enqueueNDRangeKernel(testKeccak, cl::NullRange, 1, s_workgroupSize);
-
-		bytes kernelhash(32);
-		m_queue[0].enqueueReadBuffer(hashBuff, CL_TRUE, 0, 32, kernelhash.data());
+		bytes kernelhash(8);
+		m_queue[0].enqueueReadBuffer(output, CL_TRUE, 0, 8, kernelhash.data());
+		m_queue[0].finish();
 
 		// now compute the hash on the CPU host and compare
 		bytes hash(32);
-		keccak256_0xBitcoin(challenge, sender, nonce, hash);
+		((uint64_t*) message)[8] = i;	// set the gid to duplicate what the kernel does
+		SHA3_256((const ethash_h256_t*) hash.data(), (uint8_t const*) message, 84);
+
+		hash.resize(8);
 		if (hash != kernelhash) {
 			LogS << "Not equal!";
 		}
@@ -688,21 +740,15 @@ bool ethash_cl_miner::init(unsigned _platformId, unsigned _deviceId)
 		}
 		
 		// buffers
-		m_challenge = cl::Buffer(m_context, CL_MEM_READ_ONLY, 32);
-		m_sender = cl::Buffer(m_context, CL_MEM_READ_ONLY, 20);
-
+		
 		for (unsigned i = 0; i != c_bufferCount; ++i)
 		{
-			m_searchBuffer[i] = cl::Buffer(m_context, CL_MEM_WRITE_ONLY, sizeof(search_results));
+			m_searchBuffer[i] = cl::Buffer(m_context, CL_MEM_READ_WRITE, sizeof(search_results));
 			// first element of solutions will store the number of hash solutions found
-			m_queue[0].enqueueWriteBuffer(m_searchBuffer[i], false, offsetof(search_results, solutions), 4, &c_zero);
-			// second element of hashes will store the best hash found
-			m_queue[0].enqueueWriteBuffer(m_searchBuffer[i], false, offsetof(search_results, hashes) + sizeof(uint64_t), sizeof(uint64_t), &c_maxHash);
-			m_nonceBuffer[i] = cl::Buffer(m_context, CL_MEM_READ_ONLY, 32);
+			m_queue[0].enqueueWriteBuffer(m_searchBuffer[i], false, 0, 4, &c_zero);
+			m_precompBuffer[i] = cl::Buffer(m_context, CL_MEM_READ_ONLY, 200);
 		}
 
-		m_searchKernel.setArg(1, m_sender);
-		m_searchKernel.setArg(5, ~0u);		// isolate argument
 	}
 	catch (cl::Error const& err)
 	{
@@ -721,6 +767,7 @@ void ethash_cl_miner::search(bytes _challenge, uint64_t _target, h160 _miningAcc
 		LogF << "Trace: ethash_cl_miner::search-1, challenge = " << toHex(_challenge).substr(0, 8) << ", target = "
 			<< std::hex << std::setw(16) << std::setfill('0') << _target << ", miningAccount = " << _miningAccount.hex() 
 			<< ", device[" << m_device << "]";
+
 		int l_throttle = 0;		// percent throttling
 		int l_bufferCount;
 		// used for throttling calculations. does not include throttling delays.
@@ -737,10 +784,11 @@ void ethash_cl_miner::search(bytes _challenge, uint64_t _target, h160 _miningAcc
 		}
 
 		h256 nonce;
-		m_queue[0].enqueueWriteBuffer(m_challenge, CL_TRUE, 0, 32, _challenge.data());
-		m_queue[0].enqueueWriteBuffer(m_sender, CL_TRUE, 0, 20, _miningAccount.data());
-		m_searchKernel.setArg(0, m_challenge);
-		m_searchKernel.setArg(4, _target);
+		uint8_t message[88] = {0};
+		memcpy(&message[0], _challenge.data(), 32);
+		memcpy(&message[32], _miningAccount.data(), 20);
+
+		m_searchKernel.setArg(2, _target);
 
 		LogF << "Trace: ethash_cl_miner::search-2, device[" << m_device << "]";
 
@@ -799,10 +847,15 @@ void ethash_cl_miner::search(bytes _challenge, uint64_t _target, h160 _miningAcc
 			kernelStartTime = SteadyClock::now();
 			if (m_pending.size() < l_bufferCount)
 			{
-				m_searchKernel.setArg(3, m_searchBuffer[m_buf]);
 				nonce = h256::random();
-				m_queue[m_buf].enqueueWriteBuffer(m_nonceBuffer[m_buf], CL_TRUE, 0, 32, nonce.data());
-				m_searchKernel.setArg(2, m_nonceBuffer[m_buf]);
+				memcpy(&message[52], nonce.data(), 32);
+
+				uint64_t precomp[25];
+				keccak_precomp(precomp, (uint64_t*) message);
+				m_queue[m_buf].enqueueWriteBuffer(m_precompBuffer[m_buf], CL_TRUE, 0, 200, precomp);
+
+				m_searchKernel.setArg(0, m_precompBuffer[m_buf]);
+				m_searchKernel.setArg(1, m_searchBuffer[m_buf]);
 
 				m_queue[m_buf].enqueueNDRangeKernel(m_searchKernel, cl::NullRange, m_globalWorkSize, s_workgroupSize);
 				m_pending.push_back({nonce, m_buf});
@@ -827,18 +880,21 @@ void ethash_cl_miner::search(bytes _challenge, uint64_t _target, h160 _miningAcc
 				unsigned num_found = min<unsigned>(m_results[batch.buf]->solutions[0], c_maxSearchResults);
 				h256 nonces[c_maxSearchResults];
 				for (unsigned i = 0; i != num_found; ++i) {
-					// in the kernel, the upper 4 bytes of the nonce passed in is overwritten with the
-					// kernel work item #, so that each work item is hashing with a different nonce.
-					// so we do the same thing here so we can check the result.
+
+					// in the kernel, the work item number is written into state[8], prior to doing the keccak hash, so we need 
+					// to do the same thing here so we can check the result.  that means writing the 
+					// solution starting at byte 12 of the nonce.
+
+					uint64_t soln = m_results[batch.buf]->solutions[i + 1];
 					nonces[i] = batch.nonce;
-					uint32_t* x = (uint32_t*) &nonces[i];
-					x[0] = m_results[batch.buf]->solutions[i + 1];
+					uint8_t* x = (uint8_t*) nonces[i].data();
+					*(uint64_t*) (&x[12]) = soln;
 				}
 
 				m_queue[batch.buf].enqueueUnmapMemObject(m_searchBuffer[batch.buf], m_results[batch.buf]);
 
 				if (num_found) {
-					m_queue[batch.buf].enqueueWriteBuffer(m_searchBuffer[batch.buf], false, offsetof(search_results, solutions), 4, &c_zero);
+					m_queue[batch.buf].enqueueWriteBuffer(m_searchBuffer[batch.buf], false, 0, 4, &c_zero);
 					if (_hook.found(nonces, num_found))
 						break;
 				}

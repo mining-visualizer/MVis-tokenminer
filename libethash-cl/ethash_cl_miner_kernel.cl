@@ -310,18 +310,213 @@ static void keccak_final_round(uint2* a)
 /*-----------------------------------------------------------------------------------
 * keccak_f1600_no_absorb
 *----------------------------------------------------------------------------------*/
-static void keccak_f1600_no_absorb(uint2* a, uint rounds, uint isolate)
+static void keccak_f1600_no_absorb(uint2* a, uint rounds)
 {
 	
 	for (uint r = 0; r < rounds;)
 	{
-		// This dynamic branch stops the AMD compiler unrolling the loop
+		keccak_f1600_round(a, r++);
+	}
+}
 
-		//if (isolate)
-		//{
-			keccak_f1600_round(a, r++);
-		//}
-	} 
+/*-----------------------------------------------------------------------------------
+* keccak_first_round
+*----------------------------------------------------------------------------------*/
+static void keccak_first_round(uint2* state, __constant uint2 const* d_mid, uint2 const gid)
+{
+
+	uint2 C[5];
+
+	state[2] = d_mid[2] ^ ROL2(gid, 44);
+	state[4] = d_mid[4] ^ ROL2(gid, 14);
+
+	state[6] = d_mid[6] ^ ROL2(gid, 20);
+	state[9] = d_mid[9] ^ ROL2(gid, 62);
+
+	state[11] = d_mid[11] ^ ROL2(gid, 7);
+	state[13] = d_mid[13] ^ ROL2(gid, 8);
+
+	state[15] = d_mid[15] ^ ROL2(gid, 27);
+	state[18] = d_mid[18] ^ ROL2(gid, 16);
+
+	state[20] = d_mid[20] ^ ROL2(gid, 63);
+	state[21] = d_mid[21] ^ ROL2(gid, 55);
+	state[22] = d_mid[22] ^ ROL2(gid, 39);
+
+	//  Chi
+	state[0] = chi(d_mid[0], d_mid[1], state[2]);
+	state[0] ^= Keccak_f1600_RC[0];
+	state[1] = chi(d_mid[1], state[2], d_mid[3]);
+	state[2] = chi(state[2], d_mid[3], state[4]);
+	state[3] = chi(d_mid[3], state[4], d_mid[0]);
+	state[4] = chi(state[4], d_mid[0], d_mid[1]);
+
+	C[0] = state[6];
+	state[5] = chi(d_mid[5], C[0], d_mid[7]);
+	state[6] = chi(C[0], d_mid[7], d_mid[8]);
+	state[7] = chi(d_mid[7], d_mid[8], state[9]);
+	state[8] = chi(d_mid[8], state[9], d_mid[5]);
+	state[9] = chi(state[9], d_mid[5], C[0]);
+
+	C[0] = state[11];
+	state[10] = chi(d_mid[10], C[0], d_mid[12]);
+	state[11] = chi(C[0], d_mid[12], state[13]);
+	state[12] = chi(d_mid[12], state[13], d_mid[14]);
+	state[13] = chi(state[13], d_mid[14], d_mid[10]);
+	state[14] = chi(d_mid[14], d_mid[10], C[0]);
+
+	C[0] = state[15];
+	state[15] = chi(C[0], d_mid[16], d_mid[17]);
+	state[16] = chi(d_mid[16], d_mid[17], state[18]);
+	state[17] = chi(d_mid[17], state[18], d_mid[19]);
+	state[18] = chi(state[18], d_mid[19], C[0]);
+	state[19] = chi(d_mid[19], C[0], d_mid[16]);
+
+	C[0] = state[20];
+	C[1] = state[21];
+	state[20] = chi(C[0], C[1], state[22]);
+	state[21] = chi(C[1], state[22], d_mid[23]);
+	state[22] = chi(state[22], d_mid[23], d_mid[24]);
+	state[23] = chi(d_mid[23], d_mid[24], C[0]);
+	state[24] = chi(d_mid[24], C[0], C[1]);
+
+}
+
+void keccak_2(uint2* state, uint first_round, uint rounds)
+{
+	uint2 C[5], D[5];
+
+
+	for (uint i = first_round; i < rounds; ++i)
+	{
+		C[0] = state[0] ^ state[5] ^ state[10] ^ state[15] ^ state[20];
+		C[1] = state[1] ^ state[6] ^ state[11] ^ state[16] ^ state[21];
+		C[2] = state[2] ^ state[7] ^ state[12] ^ state[17] ^ state[22];
+		C[3] = state[3] ^ state[8] ^ state[13] ^ state[18] ^ state[23];
+		C[4] = state[4] ^ state[9] ^ state[14] ^ state[19] ^ state[24];
+
+#if false
+		D[0] = ROL2(C[1], 1) ^ C[4];
+		D[1] = ROL2(C[2], 1) ^ C[0];
+		D[2] = ROL2(C[3], 1) ^ C[1];
+		D[3] = ROL2(C[4], 1) ^ C[2];
+		D[4] = ROL2(C[0], 1) ^ C[3];
+
+		for (x = 0; x < 5; x++)
+		{
+			state[x] ^= D[x];
+			state[x + 5] ^= D[x];
+			state[x + 10] ^= D[x];
+			state[x + 15] ^= D[x];
+			state[x + 20] ^= D[x];
+		}
+#else
+		//  this is basically a unrolled version of the above code
+		D[0] = ROL2(C[1], 1) ^ C[4];
+		state[0] ^= D[0];
+		state[5] ^= D[0];
+		state[10] ^= D[0];
+		state[15] ^= D[0];
+		state[20] ^= D[0];
+
+		D[0] = ROL2(C[2], 1) ^ C[0];
+		state[1] ^= D[0];
+		state[6] ^= D[0];
+		state[11] ^= D[0];
+		state[16] ^= D[0];
+		state[21] ^= D[0];
+
+		D[0] = ROL2(C[3], 1) ^ C[1];
+		state[2] ^= D[0];
+		state[7] ^= D[0];
+		state[12] ^= D[0];
+		state[17] ^= D[0];
+		state[22] ^= D[0];
+
+		D[0] = ROL2(C[4], 1) ^ C[2];
+		state[3] ^= D[0];
+		state[8] ^= D[0];
+		state[13] ^= D[0];
+		state[18] ^= D[0];
+		state[23] ^= D[0];
+
+		D[0] = ROL2(C[0], 1) ^ C[3];
+		state[4] ^= D[0];
+		state[9] ^= D[0];
+		state[14] ^= D[0];
+		state[19] ^= D[0];
+		state[24] ^= D[0];
+#endif
+
+		C[0] = state[1];
+		state[1] = ROL2(state[6], 44);
+		state[6] = ROL2(state[9], 20);
+		state[9] = ROL2(state[22], 61);
+		state[22] = ROL2(state[14], 39);
+		state[14] = ROL2(state[20], 18);
+		state[20] = ROL2(state[2], 62);
+		state[2] = ROL2(state[12], 43);
+		state[12] = ROL2(state[13], 25);
+		state[13] = ROL2(state[19], 8);
+		state[19] = ROL2(state[23], 56);
+		state[23] = ROL2(state[15], 41);
+		state[15] = ROL2(state[4], 27);
+		state[4] = ROL2(state[24], 14);
+		state[24] = ROL2(state[21], 2);
+		state[21] = ROL2(state[8], 55);
+		state[8] = ROL2(state[16], 45);
+		state[16] = ROL2(state[5], 36);
+		state[5] = ROL2(state[3], 28);
+		state[3] = ROL2(state[18], 21);
+		state[18] = ROL2(state[17], 15);
+		state[17] = ROL2(state[11], 10);
+		state[11] = ROL2(state[7], 6);
+		state[7] = ROL2(state[10], 3);
+		state[10] = ROL2(C[0], 1);
+
+		C[0] = state[0];
+		C[1] = state[1];
+		state[0] = chi(state[0], state[1], state[2]);
+		state[0] ^= Keccak_f1600_RC[i];
+		state[1] = chi(state[1], state[2], state[3]);
+		state[2] = chi(state[2], state[3], state[4]);
+		state[3] = chi(state[3], state[4], C[0]);
+		state[4] = chi(state[4], C[0], C[1]);
+
+		C[0] = state[5];
+		C[1] = state[6];
+		state[5] = chi(state[5], state[6], state[7]);
+		state[6] = chi(state[6], state[7], state[8]);
+		state[7] = chi(state[7], state[8], state[9]);
+		state[8] = chi(state[8], state[9], C[0]);
+		state[9] = chi(state[9], C[0], C[1]);
+
+		C[0] = state[10];
+		C[1] = state[11];
+		state[10] = chi(state[10], state[11], state[12]);
+		state[11] = chi(state[11], state[12], state[13]);
+		state[12] = chi(state[12], state[13], state[14]);
+		state[13] = chi(state[13], state[14], C[0]);
+		state[14] = chi(state[14], C[0], C[1]);
+
+		C[0] = state[15];
+		C[1] = state[16];
+		state[15] = chi(state[15], state[16], state[17]);
+		state[16] = chi(state[16], state[17], state[18]);
+		state[17] = chi(state[17], state[18], state[19]);
+		state[18] = chi(state[18], state[19], C[0]);
+		state[19] = chi(state[19], C[0], C[1]);
+
+		C[0] = state[20];
+		C[1] = state[21];
+		state[20] = chi(state[20], state[21], state[22]);
+		state[21] = chi(state[21], state[22], state[23]);
+		state[22] = chi(state[22], state[23], state[24]);
+		state[23] = chi(state[23], state[24], C[0]);
+		state[24] = chi(state[24], C[0], C[1]);
+
+	}
+
 }
 
 
@@ -333,31 +528,29 @@ static void keccak_f1600_no_absorb(uint2* a, uint rounds, uint isolate)
 __attribute__((reqd_work_group_size(GROUP_SIZE, 1, 1)))
 #endif
 __kernel void test_keccak(
-	__constant uchar const* g_challenge,		// 32 bytes	
-	__constant uint const* g_sender,			// 20 bytes (5 uints)
-	__constant uint const* g_nonce,				// 32 bytes (8 uints)
-	__global volatile uint* restrict g_output,	// 32 bytes (8 uints)
+	__constant uint2 const* g_preCompute,		// 200 bytes
+	__global volatile uint2* restrict g_output,	// 8 bytes
 	uint isolate
-) {
-	// the assumption is that the kernel will be invoked with only 1 work item, since
-	// every work item writes the results to the beginning of g_ouput.
+	) {
 
-	hash200_t state;
+	ulong const gid = get_global_id(0);
 
-	copy(state.uchars, g_challenge, 32);
-	copy(state.words + 8, g_sender, 5);
-	copy(state.words + 13, g_nonce, 8);
+	//  only 1 work item will actually compute a hash, since we only have space in the output buffer for 1 hash
+	if (gid != isolate)
+		return;
 
-	for (uint i = 21; i != 50; ++i) {
-		state.words[i] = 0;
-	}
+	uint2 gid2;
+	gid2.y = (gid >> 32) & 0xffffffff;
+	gid2.x = gid & 0xffffffff;
 
-	state.uchars[84] = 0x01;
-	state.uchars[135] = 0x80;
+	uint2 state[25];
 
-	// keccak_256
-	keccak_f1600_no_absorb((uint2*) &state, 24, isolate);
-	copy(g_output, state.words, 8);
+	keccak_first_round(state, g_preCompute, gid2);
+
+	keccak_2(state, 1, 24);
+	//keccak_final_round(state);
+
+	*g_output = state[0];
 }
 
 /*-----------------------------------------------------------------------------------
@@ -367,35 +560,25 @@ __kernel void test_keccak(
 __attribute__((reqd_work_group_size(GROUP_SIZE, 1, 1)))
 #endif
 __kernel void bitcoin0x_search(
-	__constant uchar const* g_challenge,		// 32 bytes	
-	__constant uint const* g_sender,			// 20 bytes (5 uints)
-	__constant uint const* g_nonce,				// 32 bytes (8 uints)
+	__constant uint2 const* g_preCompute,			// 200 bytes
 	__global volatile uint* restrict g_output,	
-	ulong target,
-	uint isolate
-	) 
+	ulong target
+)
 {
-	uint const gid = get_global_id(0);
+	ulong const gid = get_global_id(0);
 
 	hash200_t state;
-	copy(state.uchars, g_challenge, 32);
-	copy(state.words + 8, g_sender, 5);
-	copy(state.words + 13, g_nonce, 8);
-	// overwrite the upper 4 bytes of the nonce with the work item #, that way every
-	// work item is computing for a different nonce.
-	state.words[13] = gid;
 
-	for (uint i = 21; i != 50; ++i) {
-		state.words[i] = 0;
-	}
+	uint2 gid2;
+	gid2.y = (gid >> 32) & 0xffffffff;
+	gid2.x = gid & 0xffffffff;
 
-	// keccak_256
-	state.uchars[84] = 0x01;
-	state.uchars[135] = 0x80;
-	keccak_f1600_no_absorb((uint2*) &state, 24, isolate);
-	//keccak_final_round((uint2*) &state);
+	keccak_first_round(state.uint2s, g_preCompute, gid2);
 
-	// pick off upper 64 bits of hash
+	keccak_2(state.uint2s, 1, 24);
+	//keccak_final_round(state.uint2s);
+
+	// pick off upper 64 bits of hash and flip the bytes
 	__private ulong ulhash = as_ulong(as_uchar8(state.ulongs[0]).s76543210);
 
 	if (ulhash < target) {

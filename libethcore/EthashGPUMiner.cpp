@@ -140,8 +140,10 @@ bool EthashGPUMiner::report(h256 _nonce)
 	h160 sender(m_farm->hashingAcct);
 	bytes hash(32);
 	keccak256_0xBitcoin(challenge, sender, _nonce, hash);
+
 	LogF << "Trace: EthashGPUMiner::report, challenge = " << toHex(challenge) << ", sender = " << sender.hex()
-		<< ", hash = " << toHex(hash) << ", target = " << target.hex() << ", miner[" << m_index << "]";
+		<< ", nonce = " << _nonce.hex() << ", hash = " << toHex(hash) << ", target = " << target.hex() << ", miner[" << m_index << "]";
+
 	if (h256(hash) < target)
 		return submitProof(_nonce);
 	LogB << "Solution found, but invalid.  Possible hash fault.";
@@ -189,6 +191,8 @@ void EthashGPUMiner::workLoop()
 			startN = w.startNonce | ((uint64_t)index() << (64 - 4 - w.exSizeBits)); // this can support up to 16 devices
 
 		uint64_t threshold = upper64OfHash(target);
+
+		//m_miner->verifyHashes();
 
 		m_miner->search(challenge, threshold, h160(m_farm->hashingAcct), *m_hook);
 	}
