@@ -452,7 +452,7 @@ public:
 			exit(0);
 		}
 
-		string mps = ProgOpt::Get("0xBitcoin", "MinutesPerShare","2");
+		string mps = ProgOpt::Get("0xBitcoin", "MinutesPerShare","Pool");
 		LowerCase(mps);
 		if (mps == "pool")
 			m_minutesPerShare = -1;
@@ -461,8 +461,8 @@ public:
 			m_minutesPerShare = atoi(mps.c_str());
 			if (m_minutesPerShare < 1)
 			{
-				LogS << "Invalid 'MinutesPerShare' in tokenminer.ini. Defaulting to 2";
-				m_minutesPerShare = 2;
+				LogS << "Invalid 'MinutesPerShare' in tokenminer.ini. Defaulting to Pool";
+				m_minutesPerShare = -1;
 			}
 		}
 		// this is intended to force a specific difficulty level. useful during development & testing, not recommended for the user.
@@ -755,9 +755,6 @@ private:
 		// on input we're expecting that target and difficulty are set to the values specified by the pool.
 		static float s_lastRate = 0;
 
-		// if we're going by the pool difficulty, do nothing
-		if (m_minutesPerShare == -1) return;
-
 		if (m_difficulty != -1)
 		{
 			_difficulty = m_difficulty;
@@ -765,6 +762,9 @@ private:
 		}
 		else
 		{
+			// if we're going by the pool difficulty, do nothing
+			if (m_minutesPerShare == -1) return;
+
 			float currentRate = f.hashRates().farmRate();
 			LogF << "Trace: calcFinalTarget - s_lastRate : " << s_lastRate << ", farmRate : " << currentRate;
 			// the first time around we usually don't have good hash rate information yet.
