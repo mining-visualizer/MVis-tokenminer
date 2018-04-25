@@ -9,7 +9,7 @@ This is a fork of my MVis-ethminer program, which was a fork of Genoil's ethmine
 * Windows binaries can be downloaded from the  [Releases](https://github.com/mining-visualizer/MVis-tokenminer/releases) page, or you can build from source (see below).
 * For Linux, the only option at present is to build from source.  See the instructions below.  
 * This miner supports both pool mining and solo mining. If you want to mine solo, you either need to run your own node, or use a public one like the ones Infura provides.
-* When in pool mining mode, a user configurable dev fee is in effect.  It defaults to 2%.  See the Donations section below for instructions to change this.
+* When in pool mining mode, a 1.0% dev fee is in effect. Every 4 hours it switches to 'dev fee mining' for a short period of time, based on the percent.
 
 
 ### Installation
@@ -221,12 +221,4 @@ You can then find the executable in the `build/ethminer` subfolder
 
 ### Donations
 
-When in pool mining mode, MVis-tokenminer implements a 2% dev fee.  Every 4 hours it switches to 'dev fee mining' for a short period of time, based on the percent.  You can change the percent via `%localappdata%\tokenminer\tokenminer.ini`.  Add a `DevFee` setting to the `General` section.  Use the following format:
-```
-[General]
-; set dev fee to 2%
-DevFee=2.0
-```
-
-
-In addition to the dev fee, you are always welcome to make donations to `mining-visualizer.eth (0xA804e933301AA2C919D3a9834082Cddda877C205)`
+Donations can be made to to `mining-visualizer.eth (0xA804e933301AA2C919D3a9834082Cddda877C205)`

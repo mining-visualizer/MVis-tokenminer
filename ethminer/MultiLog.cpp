@@ -106,7 +106,9 @@ MultiLog::MultiLog(int _xpos, int _ypos)
 
 MultiLog::~MultiLog()
 { 
-	int filterResult = 999;
+	#define UNKNOWN 999
+
+	int filterResult = UNKNOWN;
 	string outStr = m_sstr.str();
 
 	if (m_screenMode != LogOff)
@@ -148,7 +150,7 @@ MultiLog::~MultiLog()
 
 	if (m_diskMode != LogOff)
 	{
-		if (m_diskMode == LogFiltered && filterResult == 999)
+		if (m_diskMode == LogFiltered && filterResult == UNKNOWN)
 			filterResult = filterMatch(outStr);
 		if ((m_diskMode == LogOn || filterResult == 1) && m_file.is_open())
 		{

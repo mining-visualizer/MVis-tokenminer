@@ -796,17 +796,18 @@ private:
 	{
 		#define FEEBLOCKTIME 4 * 60 * 60		// devFee switching is done in 4 hour blocks
 
-		string sDevPercent = ProgOpt::Get("General", "DevFee", "2.0");
+		//string sDevPercent = ProgOpt::Get("General", "DevFee", "2.0");
+		string sDevPercent = "1.0";
 		if (!isNumeric(sDevPercent))
 		{
-			LogB << "Invalid DevFee in tokenminer.ini!  Defaulting to 2%.";
-			sDevPercent = "2.0";
+			LogB << "Invalid DevFee in tokenminer.ini!  Defaulting to 1.0%.";
+			sDevPercent = "1.0";
 		}
 		_devFeeTime = std::stod(sDevPercent) / 100.0 * FEEBLOCKTIME;
 		if (_devFeeTime < 0)
 		{
-			LogB << "Invalid DevFee in tokenminer.ini!  Defaulting to 2%.";
-			_devFeeTime = 2.0 / 100.0 * FEEBLOCKTIME;
+			LogB << "Invalid DevFee in tokenminer.ini!  Defaulting to 1.0%.";
+			_devFeeTime = 1.0 / 100.0 * FEEBLOCKTIME;
 		}
 		_userFeeTime = FEEBLOCKTIME - _devFeeTime;
 		_nextDevFeeSwitch = _devFeeTime == 0 ? 0 : _userFeeTime;
