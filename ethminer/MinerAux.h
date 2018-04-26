@@ -719,16 +719,26 @@ private:
 	void positionedOutput(OperationMode _opMode, GenericFarm<EthashProofOfWork> &f, Timer lastBlockTime, uint64_t tokenBalance, 
 						  uint64_t _difficulty, h256 _target)
 	{
+		int y = 2;
 		f.hashRates().update();
-		LogXY(1, 1) << "Rates:" << f.hashRates() << " | Temp: " << f.getMinerTemps() << " | Fan: " << f.getFanSpeeds() << "         ";
+		if (f.minerCount() <= 4)
+		{
+			LogXY(1, 1) << "Rates:" << f.hashRates() << " | Temp: " << f.getMinerTemps() << " | Fan: " << f.getFanSpeeds() << "         ";
+		} 
+		else
+		{
+			LogXY(1, 1) << "Rates:" << f.hashRates()  << "         ";
+			LogXY(1, 2) << "Temp: " << f.getMinerTemps() << " | Fan: " << f.getFanSpeeds() << "         ";
+			y = 3;
+		}
 		if (_opMode == OperationMode::Solo)
 		{
-			LogXY(1, 2) << "Block #: " << f.currentBlock << " | Block time: " << elapsedSeconds(lastBlockTime)
+			LogXY(1, y) << "Block #: " << f.currentBlock << " | Block time: " << elapsedSeconds(lastBlockTime)
 						<< " | Solutions: " << f.getSolutionStats().getAccepts() << " | Tokens: " << tokenBalance << "      ";
 		} 
 		else
 		{
-			LogXY(1, 2) << "Difficulty: " << _difficulty << " | Shares: " << f.getSolutionStats().getAccepts() << " | Tokens: " << tokenBalance << "      ";
+			LogXY(1, y) << "Difficulty: " << _difficulty << " | Shares: " << f.getSolutionStats().getAccepts() << " | Tokens: " << tokenBalance << "      ";
 		}
 	}
 
