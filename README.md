@@ -14,6 +14,8 @@ This is a fork of my MVis-ethminer program, which was a fork of Genoil's ethmine
 
 ### Installation
 
+**YouTube Tutorial** : https://www.youtube.com/watch?v=W-gLERwzKno
+
 * Unzip the [download package](https://github.com/mining-visualizer/MVis-tokenminer/releases) anywhere you like.  
 * Open up `tokenminer.ini` using any text editor and set the following configuration items:
 * For POOL MINING, the main thing you need to specify in the .INI file is your ETH account address to which rewards will be paid out. Look for the line that starts with `MinerAcct=`.  You can also specify the pool mining address in the `[Node]` section, or you can do that on the command line (-N).  See below for all command line options.
