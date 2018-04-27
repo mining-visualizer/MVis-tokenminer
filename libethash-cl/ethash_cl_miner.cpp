@@ -72,7 +72,7 @@ using namespace std;
 using namespace dev;
 
 unsigned const ethash_cl_miner::c_defaultLocalWorkSize = 128;
-unsigned const ethash_cl_miner::c_defaultWorkSizeMultiplier = 32768;
+unsigned const ethash_cl_miner::c_defaultWorkSizeMultiplier = 196608;
 
 unsigned const c_nonceLinear = 1;
 unsigned const c_nonceRandom = 2;
@@ -774,7 +774,6 @@ void ethash_cl_miner::search(bytes _challenge, uint64_t _target, h160 _miningAcc
 		Timer kernelTimer;
 		// put in a rough guess for now, in case we are throttling
 		int kernelTime = 100;
-		Timer kernelLaunch;
 		int batchCount = 0;
 
 		{
@@ -858,14 +857,8 @@ void ethash_cl_miner::search(bytes _challenge, uint64_t _target, h160 _miningAcc
 				m_searchKernel.setArg(0, m_precompBuffer[m_buf]);
 				m_searchKernel.setArg(1, m_searchBuffer[m_buf]);
 
-				// make sure the kernel runs are staggered to hide latency here on the host
-				if (kernelLaunch.elapsedMilliseconds() < 10)
-					this_thread::sleep_for(chrono::milliseconds(10));
-
 				m_queue[m_buf].enqueueNDRangeKernel(m_searchKernel, cl::NullRange, m_globalWorkSize, s_workgroupSize);
 				m_pending.push_back({nonce, m_buf});
-
-				kernelLaunch.restart();
 
 				m_results[m_buf] = (search_results*) m_queue[m_buf].enqueueMapBuffer(m_searchBuffer[m_buf], CL_FALSE, CL_MAP_READ, 0, 
 																			   sizeof(search_results), 0, &m_mapEvents[m_buf]);
