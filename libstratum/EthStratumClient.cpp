@@ -37,22 +37,13 @@ EthStratumClient::EthStratumClient(
 	m_port = port;
 	m_userAcct = userAcct;
 
-	m_authorized = true;
+	m_authorized = false;
 	m_connected = false;
 	m_running = true;
 	m_failoverAvailable = retries != 0;
 	m_maxRetries = m_failoverAvailable ? retries : c_StopWorkAt;
 	m_retries = 0;
 	m_worktimeout = worktimeout;
-
-	//f->onSolutionFound([&] (EthashProofOfWork::Solution sol, int miner) {
-	//	m_solutionMiner = miner;
-	//	if (isConnected())
-	//		submit(sol);
-	//	else
-	//		LogB << "Can't submit solution: Not connected";
-	//	return false;
-	//});
 
 	p_worktimer = nullptr;
 
@@ -125,6 +116,7 @@ void EthStratumClient::disconnect()
 {
 	LogS << "Disconnecting from stratum server";
 	m_connected = false;
+	m_authorized = false;
 	m_running = false;
 	m_socket.close();
 	m_io_service.stop();
@@ -200,45 +192,72 @@ void EthStratumClient::readResponse(const boost::system::error_code& ec, std::si
 
 void EthStratumClient::processReponse(Json::Value& responseObject)
 {
-	Json::Value error = responseObject.get("error", new Json::Value);
-	if (error.isArray())
+	if (!validInput(responseObject))
 	{
-		string msg = error.get(1, "Unknown error").asString();
-		LogB << msg;
+		LogB << "Invalid JSON response from pool: " << responseObject.toStyledString();
 		return;
-	}
-	Json::Value params;
-	int id = responseObject.get("id", Json::Value::null).asInt();
-	switch (id)
+	}	
+
+	switch (responseObject["id"].asInt())
 	{
-		case 1:
+		case 1:		// response from mining.subscribe
+			
+			if (responseObject["result"].asBool())
 			{
 				LogB << "Connection established";
+				m_authorized = true;
+			} 
+			else
+			{
+				reconnect("Pool login rejected. Reason given : " + responseObject["error"][1].asString());
+				return;
 			}
 			break;
-		case 4:		// share submit
-			//if (responseObject.get("result", false).asBool())
-			//	p_farm->recordSolution(SolutionState::Accepted, m_stale, m_solutionMiner);
-			//else
-			//	p_farm->recordSolution(SolutionState::Rejected, m_stale, m_solutionMiner);
+		case 4:		// response from mining.submit
+			if (!responseObject["result"].asBool())
+			{
+				LogB << "Solution was rejected by the pool. Reason : " << responseObject["error"][1].asString();
+			}
 			break;
 		default:
-			string method = responseObject.get("method", "").asString();
-
-			if (method == "mining.notify")
+			if (responseObject["method"].asString() == "mining.notify")
 			{
-				params = responseObject.get("params", Json::Value::null);
-				if (params.isArray())
-				{
-					m_challenge = fromHex(params[0].asString());
-					m_target = u256(params[1].asString()); 
-					m_difficulty = atoll(params[2].asString().c_str());
-					m_hashingAcct = params[3].asString();
-				}
+				m_challenge = fromHex(responseObject["params"][0].asString());
+				m_target = u256(responseObject["params"][1].asString());
+				m_difficulty = atoll(responseObject["params"][2].asString().c_str());
+				m_hashingAcct = responseObject["params"][3].asString();
+			} 
+			else
+			{
+				LogB << "Unexpected JSON notification from pool : " << responseObject.toStyledString();
 			}
 			break;
 	}
+}
 
+bool EthStratumClient::validInput(Json::Value _json)
+{
+	if (_json.isMember("result"))
+	{
+		if (!_json.isMember("error"))
+			return false;
+
+		if (!_json["result"].asBool() && (!_json["error"].isArray() || _json["error"].size() < 2))
+			return false;
+
+		return true;
+	} 
+	else if (_json.isMember("method"))
+	{
+		if (!_json.isMember("params") || !_json["params"].isArray())
+			return false;
+
+		return true;
+	} 
+	else
+	{
+		return false;
+	}
 }
 
 void EthStratumClient::writeStratum(Json::Value _json)

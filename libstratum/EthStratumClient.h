@@ -68,14 +68,15 @@ private:
 	void work_timeout_handler(const boost::system::error_code& ec);
 	string streamBufToStr(boost::asio::streambuf &buff);
 	void logJson(Json::Value _json);
+	bool validInput(Json::Value _json);
 
 	string m_host;
 	string m_port;
 	string m_password;
 
-	bool m_authorized;
+	bool m_authorized;	// we're subscribed to the pool
 	bool m_connected;	// this refers to a TCP connection
-	bool m_running;
+	bool m_running;		// the TCP worker thread is running & listening
 
 	int	m_retries = 0;
 	int	m_maxRetries;

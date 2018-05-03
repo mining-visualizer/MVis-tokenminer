@@ -1119,8 +1119,6 @@ private:
 
 	}	// doStratum
 
-public:
-
 
 private:
 
