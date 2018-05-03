@@ -52,7 +52,7 @@ public:
 
 	bool isRunning() { return m_running; }
 	bool isConnected() { return m_connected && m_authorized; }
-	bool submit();
+	void submitWork(h256 _nonce, bytes _hash, bytes _challenge, uint64_t _difficulty);
 	void getWork(bytes& _challenge, h256& _target, uint64_t& _difficulty, string& _hashingAcct);
 	void disconnect();
 

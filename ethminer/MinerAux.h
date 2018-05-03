@@ -1104,7 +1104,7 @@ private:
 			keccak256_0xBitcoin(challenge, sender, solution, hash);
 			if (h256(hash) < target)
 			{
-				LogS << "Solution found; Submitting to pool" << ((nextDevFeeSwitch >= 0) ? "" : " on the dev account");
+				LogS << "Solution found; Submitting to pool";
 				LogD << "Solution found: challenge = " << toHex(challenge).substr(0, 8) << ", nonce = " << solution.hex().substr(0, 8);
 				client.submitWork(solution, hash, challenge, difficulty);
 				f.recordSolution(SolutionState::Accepted, false, solutionMiner);
