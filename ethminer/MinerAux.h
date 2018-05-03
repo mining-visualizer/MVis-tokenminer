@@ -1056,17 +1056,13 @@ private:
 		h256 target;
 		bytes challenge;
 
-		//client.onWorkPackage([&] (unsigned int _blockNumber) {
-		//	f.currentBlock = _blockNumber;
-		//	lastBlockTime.restart();
-		//});
+		h256 solution;
+		int solutionMiner = -1;
 
 		while (client.isRunning())
 		{
-			h256 solution;
-			int solutionMiner;
 
-			while (!f.solutionFound(solution, solutionMiner) && !f.shutDown)
+			while (!f.solutionFound(solution, solutionMiner) && !f.shutDown && client.isRunning())
 			{
 				if (lastHashRateDisplay.elapsedSeconds() >= 2.0 && client.isConnected() && f.isMining())
 				{
@@ -1099,19 +1095,23 @@ private:
 			if (f.shutDown)
 				break;
 
-			bytes hash(32);
-			h160 sender(f.hashingAcct);
-			keccak256_0xBitcoin(challenge, sender, solution, hash);
-			if (h256(hash) < target)
+			if (solutionMiner != -1)
 			{
-				LogS << "Solution found; Submitting to pool";
-				LogD << "Solution found: challenge = " << toHex(challenge).substr(0, 8) << ", nonce = " << solution.hex().substr(0, 8);
-				client.submitWork(solution, hash, challenge, difficulty);
-				f.recordSolution(SolutionState::Accepted, false, solutionMiner);
-			} else
-			{
-				LogB << "Solution found, but invalid.  Possibly stale.";
-				f.recordSolution(SolutionState::Accepted, true, solutionMiner);
+				bytes hash(32);
+				h160 sender(f.hashingAcct);
+				keccak256_0xBitcoin(challenge, sender, solution, hash);
+				if (h256(hash) < target)
+				{
+					LogS << "Solution found; Submitting to pool";
+					LogD << "Solution found: challenge = " << toHex(challenge).substr(0, 8) << ", nonce = " << solution.hex().substr(0, 8);
+					client.submitWork(solution, hash, challenge, difficulty);
+					f.recordSolution(SolutionState::Accepted, false, solutionMiner);
+				} else
+				{
+					LogB << "Solution found, but invalid.  Possibly stale.";
+					f.recordSolution(SolutionState::Accepted, true, solutionMiner);
+				}
+				solutionMiner = -1;
 			}
 
 		}
