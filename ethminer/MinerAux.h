@@ -429,24 +429,24 @@ public:
 			exit(0);
 		}
 
-		string mAcct = ProgOpt::Get("0xBitcoin", "MinerAcct");
-		LowerCase(mAcct);
+		m_userAcct = ProgOpt::Get("0xBitcoin", "MinerAcct");
+		LowerCase(m_userAcct);
 		u256 mAcctNum;
 		try
 		{
-			mAcctNum = u256(mAcct);
+			mAcctNum = u256(m_userAcct);
 		}
 		catch (...)
 		{
 			LogS << "'MinerAcct' contains invalid characters in tokenminer.ini";
 			exit(0);
 		}
-		if (mAcct.substr(0, 2) != "0x")
+		if (m_userAcct.substr(0, 2) != "0x")
 		{
 			LogS << "Invalid 'MinerAcct' in tokenminer.ini - Miner account should start with '0x'";
 			exit(0);
 		}
-		if (mAcctNum == 0 || mAcct.length() != 42)
+		if (mAcctNum == 0 || m_userAcct.length() != 42)
 		{
 			LogS << "Invalid 'MinerAcct' in tokenminer.ini";
 			exit(0);
@@ -546,7 +546,7 @@ public:
 				if (m_nodes[i].url != "")
 				{
 					if (m_nodes[i].stratumPort != "")
-						doStratum(f, m_nodes[i].url, m_nodes[i].rpcPort, m_nodes[i].stratumPort, m_nodes[i].stratumPwd);
+						doStratum(f, m_nodes[i].url, m_nodes[i].rpcPort, m_nodes[i].stratumPort);
 					else
 						doFarm(f, m_nodes[i].url, m_nodes[i].rpcPort);
 				}
@@ -857,17 +857,17 @@ private:
 		// if pool mining, workRPC points to the mining pool, and nodeRPC points to Infura
 
 		jsonrpc::HttpClient client(_nodeURL + ":" + _rpcPort);
-		FarmClient workRPC(client, m_opMode);
+		FarmClient workRPC(client, m_opMode, m_userAcct);
 
 		jsonrpc::HttpClient* nodeClient;
 		FarmClient* nodeRPC = &workRPC;
 		if (m_opMode == OperationMode::Pool)
 		{
 			nodeClient = new jsonrpc::HttpClient("https://mainnet.infura.io/J9KBwsJ0q1LMIQvzDlGC:8545");
-			nodeRPC = new FarmClient(*nodeClient, OperationMode::Solo);
+			nodeRPC = new FarmClient(*nodeClient, OperationMode::Solo, m_userAcct);
 		}
 		else
-			f.hashingAcct = workRPC.userAcct;
+			f.hashingAcct = m_userAcct;
 		h256 target;
 		bytes challenge;
 		deque<bytes> recentChallenges;
@@ -1043,19 +1043,19 @@ private:
 	/*-----------------------------------------------------------------------------------
 	* doStratum
 	*----------------------------------------------------------------------------------*/
-	void doStratum(GenericFarm<EthashProofOfWork>& f, string _nodeURL, string _rpcPort, string _stratumPort, string _stratumPwd)
+	void doStratum(GenericFarm<EthashProofOfWork>& f, string _nodeURL, string _rpcPort, string _stratumPort)
 	{
 		// retry of zero means retry forever, since there is no failover.
 		int maxRetries = failOverAvailable() ? m_maxFarmRetries : 0;
-		EthStratumClient client(&f, m_minerType, _nodeURL, _stratumPort, _stratumPwd, maxRetries, m_worktimeout);
+		EthStratumClient client(_nodeURL, _stratumPort, maxRetries, m_worktimeout, m_userAcct);
 
 		Timer lastHashRateDisplay;
 		Timer lastBlockTime;
 
-		client.onWorkPackage([&] (unsigned int _blockNumber) {
-			f.currentBlock = _blockNumber;
-			lastBlockTime.restart();
-		});
+		//client.onWorkPackage([&] (unsigned int _blockNumber) {
+		//	f.currentBlock = _blockNumber;
+		//	lastBlockTime.restart();
+		//});
 
 		while (client.isRunning())
 		{
@@ -1121,4 +1121,7 @@ private:
 	unsigned m_pollingInterval = 2000;
 	unsigned m_worktimeout = 180;
 	bool m_shutdown = false;
+
+	string m_userAcct;
+
 };

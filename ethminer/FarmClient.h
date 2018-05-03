@@ -47,11 +47,12 @@ public:
 	FarmClient(
 		jsonrpc::IClientConnector &conn, 
 		OperationMode _opMode,
+		std::string _userAcct,
 		jsonrpc::clientVersion_t type = jsonrpc::JSONRPC_CLIENT_V2
 	) : jsonrpc::Client(conn, type)
 	{
 		m_opMode = _opMode;
-		userAcct = ProgOpt::Get("0xBitcoin", "MinerAcct");
+		m_userAcct = _userAcct;
 		if (_opMode == OperationMode::Solo)
 		{
 			m_tokenContract = ProgOpt::Get("0xBitcoin", "TokenContract");
@@ -70,7 +71,7 @@ public:
 		Json::Value result;
 		result = CallMethod("getChallengeNumber", data);
 		_challenge = fromHex(result.asString());
-		data.append(userAcct);
+		data.append(m_userAcct);
 		result = CallMethod("getMinimumShareTarget", data);
 		m_target = u256(result.asString());
 		
@@ -96,7 +97,7 @@ public:
 	{
 		// challenge
 		Json::Value p;
-		p["from"] = userAcct;			
+		p["from"] = m_userAcct;			
 		p["to"] = m_tokenContract;		
 
 		h256 bMethod = sha3("getChallengeNumber()");
@@ -141,7 +142,7 @@ public:
 		LogF << "Trace: SubmitWorkPool, digest = " << toHex(_hash);
 		Json::Value data;
 		data.append("0x" + _nonce.hex());
-		data.append(devFeeMining ? DonationAddress : userAcct);
+		data.append(devFeeMining ? DonationAddress : m_userAcct);
 		data.append("0x" + toHex(_hash));
 		data.append((Json::UInt64)_difficulty);
 		data.append("0x" + toHex(_challenge));
@@ -381,7 +382,7 @@ public:
 	int getNextNonce() {
 		// get transaction count for nonce
 		Json::Value p;
-		p.append(userAcct);
+		p.append(m_userAcct);
 		p.append("latest");
 		Json::Value result = CallMethod("eth_getTransactionCount", p);
 		return HexToInt(result.asString());
@@ -389,7 +390,7 @@ public:
 
 	uint64_t tokenBalance() {
 		Json::Value p;
-		p["from"] = userAcct;			
+		p["from"] = m_userAcct;			
 		p["to"] = m_tokenContract;			
 
 		h256 bMethod = sha3("balanceOf(address)");
@@ -398,7 +399,7 @@ public:
 
 		// address
 		stringstream ss;
-		ss << std::setw(64) << std::setfill('0') << userAcct.substr(2);
+		ss << std::setw(64) << std::setfill('0') << m_userAcct.substr(2);
 		std::string s2(ss.str());
 		sMethod = sMethod + s2;
 		p["data"] = sMethod;
@@ -452,7 +453,7 @@ public:
 		u256 recommendation = 0;
 		for (auto m : m_biddingMiners)
 		{
-			if (m.challenge == _challenge && stricmp(m.account.c_str(), userAcct.c_str()) != 0)
+			if (m.challenge == _challenge && stricmp(m.account.c_str(), m_userAcct.c_str()) != 0)
 			{
 				LogF << "Trace: RecommendedGasPrice, existing bidder " << m.account.substr(0,10) << ", gasPrice=" << m.gasPrice;
 				if (m.gasPrice > recommendation)
@@ -610,7 +611,6 @@ public:
 
 public:
 	bool devFeeMining = false;
-	string userAcct;
 
 private:
 	OperationMode m_opMode;
@@ -625,6 +625,7 @@ private:
 	int m_startGas;
 	int m_maxGas;
 	int m_bidTop;
+	string m_userAcct;
 	string m_hashingAcct = "";
 	uint64_t m_difficulty;
 	h256 m_target;

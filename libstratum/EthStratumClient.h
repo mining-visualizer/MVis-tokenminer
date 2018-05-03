@@ -42,23 +42,18 @@ public:
 	using WorkPackageFn = std::function<void(unsigned int)>;
 
 	EthStratumClient(
-		GenericFarm<EthashProofOfWork> * f, 
-		MinerType m, 
 		string const & host, 
 		string const & port,
-		string const & password,
 		int const & retries,
-		int const & worktimeout
+		int const & worktimeout,
+		string const & userAcct
 	);
 	~EthStratumClient();
 
 	bool isRunning() { return m_running; }
 	bool isConnected() { return m_connected && m_authorized; }
-	h256 currentHeaderHash() { return m_current.headerHash; }
-	bool current() { return m_current; }
-	bool submit(EthashProofOfWork::Solution solution);
+	bool submit();
 	void disconnect();
-	void onWorkPackage(WorkPackageFn const& handler) { m_onWorkPackage = handler; }
 
 private:
 	void connectStratum();
@@ -67,7 +62,7 @@ private:
 	void readline();
 	void readResponse(const boost::system::error_code& ec, std::size_t bytes_transferred);
 	void processReponse(Json::Value& responseObject);
-	void writeStratum(boost::asio::streambuf &buff);
+	void writeStratum(Json::Value _json);
 	void setWork(Json::Value params);
 	void work_timeout_handler(const boost::system::error_code& ec);
 	string streamBufToStr(boost::asio::streambuf &buff);
@@ -86,13 +81,6 @@ private:
 	int m_worktimeout;
 	bool m_failoverAvailable;
 
-	GenericFarm<EthashProofOfWork> * p_farm;
-	EthashProofOfWork::WorkPackage m_current;
-	EthashProofOfWork::WorkPackage m_previous;
-	WorkPackageFn m_onWorkPackage;
-
-	bool m_stale = false;
-
 	boost::asio::io_service m_io_service;
 	tcp::socket m_socket;
 
@@ -102,7 +90,12 @@ private:
 	boost::asio::deadline_timer * p_worktimer;
 	boost::asio::deadline_timer * p_reconnect;
 
-	double m_nextWorkDifficulty;
 	int m_solutionMiner;
+
+	h256 m_target;
+	bytes m_challenge;
+	uint64_t m_difficulty;
+	std::string m_hashingAcct;
+	std::string m_userAcct;
 
 };
