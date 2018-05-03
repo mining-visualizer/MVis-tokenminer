@@ -37,7 +37,7 @@ EthStratumClient::EthStratumClient(
 	m_port = port;
 	m_userAcct = userAcct;
 
-	m_authorized = false;
+	m_authorized = true;
 	m_connected = false;
 	m_running = true;
 	m_failoverAvailable = retries != 0;
@@ -354,3 +354,10 @@ void EthStratumClient::logJson(Json::Value _json)
 	LogF << "Stratum.Recv: " << fw.write(_json);
 }
 
+void EthStratumClient::getWork(bytes& _challenge, h256& _target, uint64_t& _difficulty, string& _hashingAcct)
+{
+	_challenge = m_challenge;
+	_target = m_target;
+	_difficulty = m_difficulty;
+	_hashingAcct = m_hashingAcct;
+}

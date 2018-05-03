@@ -1052,6 +1052,10 @@ private:
 		Timer lastHashRateDisplay;
 		Timer lastBlockTime;
 
+		uint64_t difficulty = 0;
+		h256 target;
+		bytes challenge;
+
 		//client.onWorkPackage([&] (unsigned int _blockNumber) {
 		//	f.currentBlock = _blockNumber;
 		//	lastBlockTime.restart();
@@ -1059,12 +1063,57 @@ private:
 
 		while (client.isRunning())
 		{
-			if (lastHashRateDisplay.elapsedSeconds() >= 2.0 && client.isConnected() && f.isMining())
+			h256 solution;
+			int solutionMiner;
+
+			while (!f.solutionFound(solution, solutionMiner) && !f.shutDown)
 			{
-				//positionedOutput(f, lastBlockTime, 0);
-				lastHashRateDisplay.restart();
+				if (lastHashRateDisplay.elapsedSeconds() >= 2.0 && client.isConnected() && f.isMining())
+				{
+					positionedOutput(OperationMode::Pool, f, lastBlockTime, 0, difficulty, target);
+					lastHashRateDisplay.restart();
+				}
+
+				h256 _target;
+				bytes _challenge;
+				client.getWork(_challenge, _target, difficulty, f.hashingAcct);
+				// if we're choosing our own difficulty instead of using the pools, calcFinalTarget will make the adjustment
+				calcFinalTarget(f, _target, difficulty);
+
+				if (_challenge != challenge)
+				{
+					challenge = _challenge;
+					target = _target;
+					LogB << "New challenge : " << toHex(_challenge).substr(0, 8);
+					f.setWork(challenge, target);
+				}
+				if (_target != target)
+				{
+					target = _target;
+					f.setWork(challenge, target);
+				}
+
+				this_thread::sleep_for(chrono::milliseconds(200));
 			}
-			this_thread::sleep_for(chrono::milliseconds(200));
+
+			if (f.shutDown)
+				break;
+
+			bytes hash(32);
+			h160 sender(f.hashingAcct);
+			keccak256_0xBitcoin(challenge, sender, solution, hash);
+			if (h256(hash) < target)
+			{
+				LogS << "Solution found; Submitting to pool" << ((nextDevFeeSwitch >= 0) ? "" : " on the dev account");
+				LogD << "Solution found: challenge = " << toHex(challenge).substr(0, 8) << ", nonce = " << solution.hex().substr(0, 8);
+				client.submitWork(solution, hash, challenge, difficulty);
+				f.recordSolution(SolutionState::Accepted, false, solutionMiner);
+			} else
+			{
+				LogB << "Solution found, but invalid.  Possibly stale.";
+				f.recordSolution(SolutionState::Accepted, true, solutionMiner);
+			}
+
 		}
 
 
