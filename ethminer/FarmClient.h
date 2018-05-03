@@ -53,9 +53,9 @@ public:
 	{
 		m_opMode = _opMode;
 		m_userAcct = _userAcct;
+		m_tokenContract = ProgOpt::Get("0xBitcoin", "TokenContract");
 		if (_opMode == OperationMode::Solo)
 		{
-			m_tokenContract = ProgOpt::Get("0xBitcoin", "TokenContract");
 			m_userAcctPK = ProgOpt::Get("0xBitcoin", "AcctPK");
 			m_bidTop = 2;
 			string s = ProgOpt::Get("0xBitcoin", "BidTop", "2");

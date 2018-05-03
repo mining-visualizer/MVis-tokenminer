@@ -1051,6 +1051,7 @@ private:
 
 		Timer lastHashRateDisplay;
 		Timer lastBlockTime;
+		Timer lastBalanceCheck;
 
 		uint64_t difficulty = 0;
 		h256 target;
@@ -1059,6 +1060,11 @@ private:
 		h256 solution;
 		int solutionMiner = -1;
 
+		jsonrpc::HttpClient rpcClient("https://mainnet.infura.io/J9KBwsJ0q1LMIQvzDlGC:8545");
+		FarmClient nodeRPC(rpcClient, OperationMode::Solo, m_userAcct);
+
+		int tokenBalance = nodeRPC.tokenBalance();
+
 		while (client.isRunning())
 		{
 
@@ -1066,7 +1072,7 @@ private:
 			{
 				if (lastHashRateDisplay.elapsedSeconds() >= 2.0 && client.isConnected() && f.isMining())
 				{
-					positionedOutput(OperationMode::Pool, f, lastBlockTime, 0, difficulty, target);
+					positionedOutput(OperationMode::Pool, f, lastBlockTime, tokenBalance, difficulty, target);
 					lastHashRateDisplay.restart();
 				}
 
@@ -1087,6 +1093,12 @@ private:
 				{
 					target = _target;
 					f.setWork(challenge, target);
+				}
+
+				if (lastBalanceCheck.elapsedSeconds() >= 60)
+				{
+					tokenBalance = nodeRPC.tokenBalance();
+					lastBalanceCheck.restart();
 				}
 
 				this_thread::sleep_for(chrono::milliseconds(200));
