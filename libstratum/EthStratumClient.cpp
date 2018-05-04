@@ -196,6 +196,7 @@ void EthStratumClient::readResponse(const boost::system::error_code& ec, std::si
 	}
 }
 
+
 void EthStratumClient::processReponse(Json::Value& responseObject)
 {
 	if (!validInput(responseObject))
@@ -328,16 +329,6 @@ void EthStratumClient::getWork(bytes& _challenge, h256& _target, uint64_t& _diff
 	_target = m_target;
 	_difficulty = m_difficulty;
 	_hashingAcct = m_hashingAcct;
-}
-
-void EthStratumClient::setVerbosity(bool _verbose)
-{
-	m_verbose = _verbose;
-}
-
-void EthStratumClient::setUserAcct(string _userAcct)
-{
-	m_userAcct = _userAcct;
 }
 
 bool EthStratumClient::isRunning() 

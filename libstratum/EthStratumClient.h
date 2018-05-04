@@ -56,8 +56,6 @@ public:
 	void submitWork(h256 _nonce, bytes _hash, bytes _challenge, uint64_t _difficulty);
 	void getWork(bytes& _challenge, h256& _target, uint64_t& _difficulty, string& _hashingAcct);
 	void disconnect();
-	void setVerbosity(bool _verbose);
-	void setUserAcct(string _userAcct);
 	void switchAcct(string _newAcct);
 
 private:

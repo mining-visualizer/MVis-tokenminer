@@ -804,24 +804,23 @@ private:
 	*----------------------------------------------------------------------------------*/
 	void calcDevFeeTimes(int& _nextDevFeeSwitch, int& _userFeeTime, int& _devFeeTime)
 	{
-		#define FEEBLOCKTIME 60		// devFee switching is done in 4 hour blocks
+		#define FEEBLOCKTIME 4 * 60 * 60		// devFee switching is done in 4 hour blocks
 
-		//string sDevPercent = ProgOpt::Get("General", "DevFee", "2.0");
-		string sDevPercent = "50.0";
+		string sDevPercent = ProgOpt::Get("General", "DevFee", "1.0");
+		float nDevPercent;
 		if (!isNumeric(sDevPercent))
+			nDevPercent = 1.0;
+		else
 		{
-			LogB << "Invalid DevFee in tokenminer.ini!  Defaulting to 1.0%.";
-			sDevPercent = "1.0";
+			nDevPercent = std::stod(sDevPercent);
+			nDevPercent = nDevPercent < 1.0 ? 1.0 : nDevPercent;
 		}
-		_devFeeTime = std::stod(sDevPercent) / 100.0 * FEEBLOCKTIME;
-		if (_devFeeTime < 0)
-		{
-			LogB << "Invalid DevFee in tokenminer.ini!  Defaulting to 1.0%.";
-			_devFeeTime = 1.0 / 100.0 * FEEBLOCKTIME;
-		}
-		_userFeeTime = FEEBLOCKTIME - _devFeeTime;
-		_nextDevFeeSwitch = _devFeeTime == 0 ? 0 : _userFeeTime;
 
+		_devFeeTime = nDevPercent / 100.0 * FEEBLOCKTIME;
+		_userFeeTime = FEEBLOCKTIME - _devFeeTime;
+		_nextDevFeeSwitch = _devFeeTime == 0 ? 0 : (FEEBLOCKTIME / 2);
+
+		LogS << "Dev fee times " << nDevPercent << ", " << _devFeeTime << ", " << _userFeeTime << ", " << _nextDevFeeSwitch;
 	}
 
 	/*-----------------------------------------------------------------------------------
@@ -1120,26 +1119,11 @@ private:
 						LogB << "Switching to user mining.";
 						nextDevFeeSwitch = userFeeTime;
 						client->switchAcct(m_userAcct);
-						// don't bother the user with a bunch of disconnecting/re-connecting messages
-						//client->setVerbosity(false);
-						//client->disconnect();
-						//client->setUserAcct(m_userAcct);
-						//this_thread::sleep_for(chrono::milliseconds(100));
-						//client->restart();
-						//this_thread::sleep_for(chrono::milliseconds(100));
-						//client->setVerbosity(true);
 					} else
 					{
 						LogB << "Switching to dev fee mining.";
 						nextDevFeeSwitch = (-1) * devFeeTime;
 						client->switchAcct(DonationAddress);
-						//client->setVerbosity(false);
-						//client->disconnect();
-						//client->setUserAcct(DonationAddress);
-						//this_thread::sleep_for(chrono::milliseconds(100));
-						//client->restart();
-						//this_thread::sleep_for(chrono::milliseconds(100));
-						//client->setVerbosity(true);
 					}
 					devFeeSwitch.restart();
 				}
