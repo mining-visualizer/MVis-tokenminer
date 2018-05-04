@@ -112,9 +112,10 @@ void EthStratumClient::connectStratum()
 }
 
 
-void EthStratumClient::disconnect()
+void EthStratumClient::disconnect(bool quiet)
 {
-	LogS << "Disconnecting from stratum server";
+	if (!quiet)
+		LogS << "Disconnecting from stratum server";
 	m_connected = false;
 	m_authorized = false;
 	m_running = false;
@@ -222,6 +223,7 @@ void EthStratumClient::processReponse(Json::Value& responseObject)
 		default:
 			if (responseObject["method"].asString() == "mining.notify")
 			{
+				Guard l(x_work);
 				m_challenge = fromHex(responseObject["params"][0].asString());
 				m_target = u256(responseObject["params"][1].asString());
 				m_difficulty = atoll(responseObject["params"][2].asString().c_str());
@@ -315,6 +317,7 @@ void EthStratumClient::logJson(Json::Value _json)
 
 void EthStratumClient::getWork(bytes& _challenge, h256& _target, uint64_t& _difficulty, string& _hashingAcct)
 {
+	Guard l(x_work);
 	_challenge = m_challenge;
 	_target = m_target;
 	_difficulty = m_difficulty;

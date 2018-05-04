@@ -54,7 +54,7 @@ public:
 	bool isConnected() { return m_connected && m_authorized; }
 	void submitWork(h256 _nonce, bytes _hash, bytes _challenge, uint64_t _difficulty);
 	void getWork(bytes& _challenge, h256& _target, uint64_t& _difficulty, string& _hashingAcct);
-	void disconnect();
+	void disconnect(bool quiet = true);
 
 private:
 	void connectStratum();
@@ -100,4 +100,5 @@ private:
 	std::string m_hashingAcct;
 	std::string m_userAcct;
 
+	Mutex x_work;
 };

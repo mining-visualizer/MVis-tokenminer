@@ -1045,13 +1045,11 @@ private:
 	*----------------------------------------------------------------------------------*/
 	void doStratum(GenericFarm<EthashProofOfWork>& f, string _nodeURL, string _rpcPort, string _stratumPort)
 	{
-		// retry of zero means retry forever, since there is no failover.
-		int maxRetries = failOverAvailable() ? m_maxFarmRetries : 0;
-		EthStratumClient client(_nodeURL, _stratumPort, maxRetries, m_worktimeout, m_userAcct);
 
 		Timer lastHashRateDisplay;
 		Timer lastBlockTime;
 		Timer lastBalanceCheck;
+		Timer devFeeSwitch;
 
 		uint64_t difficulty = 0;
 		h256 target;
@@ -1060,17 +1058,31 @@ private:
 		h256 solution;
 		int solutionMiner = -1;
 
+		// the absolute value of nextDevFeeSwitch is the time until the next switch.
+		// if the value is >= 0, that means we are currently mining to the user's account,
+		// if it's negative, we are mining to the dev account.
+		int nextDevFeeSwitch;
+
+		// the amount of time to spend mining for the user/dev respectively
+		int userFeeTime, devFeeTime;
+
+		calcDevFeeTimes(nextDevFeeSwitch, userFeeTime, devFeeTime);
+
+		// retry of zero means retry forever, since there is no failover.
+		int maxRetries = failOverAvailable() ? m_maxFarmRetries : 0;
+		EthStratumClient* client = new EthStratumClient(_nodeURL, _stratumPort, maxRetries, m_worktimeout, m_userAcct);
+
 		jsonrpc::HttpClient rpcClient("https://mainnet.infura.io/J9KBwsJ0q1LMIQvzDlGC:8545");
 		FarmClient nodeRPC(rpcClient, OperationMode::Solo, m_userAcct);
 
 		int tokenBalance = nodeRPC.tokenBalance();
 
-		while (client.isRunning())
+		while (client->isRunning())
 		{
 
-			while (!f.solutionFound(solution, solutionMiner) && !f.shutDown && client.isRunning())
+			while (!f.solutionFound(solution, solutionMiner) && !f.shutDown && client->isRunning())
 			{
-				if (lastHashRateDisplay.elapsedSeconds() >= 2.0 && client.isConnected() && f.isMining())
+				if (lastHashRateDisplay.elapsedSeconds() >= 2.0 && client->isConnected() && f.isMining())
 				{
 					positionedOutput(OperationMode::Pool, f, lastBlockTime, tokenBalance, difficulty, target);
 					lastHashRateDisplay.restart();
@@ -1078,7 +1090,7 @@ private:
 
 				h256 _target;
 				bytes _challenge;
-				client.getWork(_challenge, _target, difficulty, f.hashingAcct);
+				client->getWork(_challenge, _target, difficulty, f.hashingAcct);
 				// if we're choosing our own difficulty instead of using the pools, calcFinalTarget will make the adjustment
 				calcFinalTarget(f, _target, difficulty);
 
@@ -1101,6 +1113,26 @@ private:
 					lastBalanceCheck.restart();
 				}
 
+				if (nextDevFeeSwitch != 0 && devFeeSwitch.elapsedSeconds() > abs(nextDevFeeSwitch))
+				{
+					if (nextDevFeeSwitch < 0)
+					{
+						LogB << "Switching to user mining.";
+						nextDevFeeSwitch = userFeeTime;
+						client->disconnect();
+						this_thread::sleep_for(chrono::milliseconds(100));
+						client = new EthStratumClient(_nodeURL, _stratumPort, maxRetries, m_worktimeout, m_userAcct);
+					} else
+					{
+						LogB << "Switching to dev fee mining.";
+						nextDevFeeSwitch = (-1) * devFeeTime;
+						client->disconnect();
+						this_thread::sleep_for(chrono::milliseconds(100));
+						client = new EthStratumClient(_nodeURL, _stratumPort, maxRetries, m_worktimeout, DonationAddress);
+					}
+					devFeeSwitch.restart();
+				}
+				
 				this_thread::sleep_for(chrono::milliseconds(200));
 			}
 
@@ -1116,7 +1148,7 @@ private:
 				{
 					LogS << "Solution found; Submitting to pool";
 					LogD << "Solution found: challenge = " << toHex(challenge).substr(0, 8) << ", nonce = " << solution.hex().substr(0, 8);
-					client.submitWork(solution, hash, challenge, difficulty);
+					client->submitWork(solution, hash, challenge, difficulty);
 					f.recordSolution(SolutionState::Accepted, false, solutionMiner);
 				} else
 				{
@@ -1127,7 +1159,6 @@ private:
 			}
 
 		}
-
 
 	}	// doStratum
 
