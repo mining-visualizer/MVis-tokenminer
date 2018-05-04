@@ -804,10 +804,10 @@ private:
 	*----------------------------------------------------------------------------------*/
 	void calcDevFeeTimes(int& _nextDevFeeSwitch, int& _userFeeTime, int& _devFeeTime)
 	{
-		#define FEEBLOCKTIME 4 * 60 * 60		// devFee switching is done in 4 hour blocks
+		#define FEEBLOCKTIME 120		// devFee switching is done in 4 hour blocks
 
 		//string sDevPercent = ProgOpt::Get("General", "DevFee", "2.0");
-		string sDevPercent = "1.0";
+		string sDevPercent = "25.0";
 		if (!isNumeric(sDevPercent))
 		{
 			LogB << "Invalid DevFee in tokenminer.ini!  Defaulting to 1.0%.";
@@ -1071,6 +1071,7 @@ private:
 		// retry of zero means retry forever, since there is no failover.
 		int maxRetries = failOverAvailable() ? m_maxFarmRetries : 0;
 		EthStratumClient* client = new EthStratumClient(_nodeURL, _stratumPort, maxRetries, m_worktimeout, m_userAcct);
+		client->start();
 
 		jsonrpc::HttpClient rpcClient("https://mainnet.infura.io/J9KBwsJ0q1LMIQvzDlGC:8545");
 		FarmClient nodeRPC(rpcClient, OperationMode::Solo, m_userAcct);
@@ -1122,6 +1123,7 @@ private:
 						client->disconnect();
 						this_thread::sleep_for(chrono::milliseconds(100));
 						client = new EthStratumClient(_nodeURL, _stratumPort, maxRetries, m_worktimeout, m_userAcct);
+						client->start(false);
 					} else
 					{
 						LogB << "Switching to dev fee mining.";
@@ -1129,6 +1131,7 @@ private:
 						client->disconnect();
 						this_thread::sleep_for(chrono::milliseconds(100));
 						client = new EthStratumClient(_nodeURL, _stratumPort, maxRetries, m_worktimeout, DonationAddress);
+						client->start(false);
 					}
 					devFeeSwitch.restart();
 				}

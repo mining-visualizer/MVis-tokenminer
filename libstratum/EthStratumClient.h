@@ -50,11 +50,12 @@ public:
 	);
 	~EthStratumClient();
 
+	void start(bool _verbose = true);
 	bool isRunning() { return m_running; }
 	bool isConnected() { return m_connected && m_authorized; }
 	void submitWork(h256 _nonce, bytes _hash, bytes _challenge, uint64_t _difficulty);
 	void getWork(bytes& _challenge, h256& _target, uint64_t& _difficulty, string& _hashingAcct);
-	void disconnect(bool quiet = true);
+	void disconnect();
 
 private:
 	void connectStratum();
@@ -82,6 +83,7 @@ private:
 	int	m_maxRetries;
 	int m_worktimeout;
 	bool m_failoverAvailable;
+	bool m_verbose;
 
 	boost::asio::io_service m_io_service;
 	tcp::socket m_socket;

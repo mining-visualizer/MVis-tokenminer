@@ -32,7 +32,6 @@ EthStratumClient::EthStratumClient(
 )
 	: m_socket(m_io_service)
 {
-	// Note: host should not include the "http://" prefix.
 	m_host = host;
 	m_port = port;
 	m_userAcct = userAcct;
@@ -48,13 +47,19 @@ EthStratumClient::EthStratumClient(
 	p_worktimer = nullptr;
 
 	launchIOS();
-
 }
 
 EthStratumClient::~EthStratumClient()
 {
 	m_io_service.stop();
 }
+
+void EthStratumClient::start(bool _verbose)
+{
+	m_verbose = _verbose;
+
+}
+
 
 /*-----------------------------------------------------------------------------------
 * launchIOS
@@ -88,7 +93,8 @@ void EthStratumClient::launchIOS()
 
 void EthStratumClient::connectStratum()
 {
-	LogB << "Connecting to stratum server " << m_host + ":" + m_port << " ...";
+	if (m_verbose)
+		LogB << "Connecting to stratum server " << m_host + ":" + m_port << " ...";
 	tcp::resolver resolver(m_io_service);
 	tcp::resolver::query query(m_host, m_port);
 
@@ -112,9 +118,9 @@ void EthStratumClient::connectStratum()
 }
 
 
-void EthStratumClient::disconnect(bool quiet)
+void EthStratumClient::disconnect()
 {
-	if (!quiet)
+	if (m_verbose)
 		LogS << "Disconnecting from stratum server";
 	m_connected = false;
 	m_authorized = false;
@@ -205,7 +211,8 @@ void EthStratumClient::processReponse(Json::Value& responseObject)
 			
 			if (responseObject["result"].asBool())
 			{
-				LogB << "Connection established";
+				if (m_verbose)
+					LogB << "Connection established";
 				m_authorized = true;
 			} 
 			else
