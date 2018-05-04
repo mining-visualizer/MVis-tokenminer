@@ -61,6 +61,7 @@ public:
 private:
 	void connectStratum();
 	void launchIOS();
+	string checkHost(string _host);
 	void reconnect(string msg);
 	void readline();
 	void readResponse(const boost::system::error_code& ec, std::size_t bytes_transferred);

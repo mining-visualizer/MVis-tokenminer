@@ -32,7 +32,7 @@ EthStratumClient::EthStratumClient(
 )
 	: m_socket(m_io_service)
 {
-	m_host = host;
+	m_host = checkHost(host);
 	m_port = port;
 	m_userAcct = userAcct;
 
@@ -53,6 +53,19 @@ EthStratumClient::~EthStratumClient()
 	m_io_service.stop();
 }
 
+string EthStratumClient::checkHost(string _host)
+{
+	// boost asio doesn't like the http:// prefix (stratum mining)
+	// json rpc (FarmClient) is ok with it though.
+
+	size_t p;
+	if ((p = _host.find("://")) != string::npos)
+	{
+		_host = _host.substr(p + 3, string::npos);
+	}
+
+	return _host;
+}
 
 /*-----------------------------------------------------------------------------------
 * launchIOS
@@ -98,7 +111,14 @@ void EthStratumClient::connectStratum()
 	tcp::resolver::query query(m_host, m_port);
 
 	boost::system::error_code ec;
-	connect(m_socket, resolver.resolve(query), ec);
+	try
+	{
+		connect(m_socket, resolver.resolve(query), ec);
+	}
+	catch (const std::exception& e)
+	{
+		LogB << "Exception: EthStratumClient::connectStratum - " << e.what();
+	}
 	if (ec)
 	{
 		reconnect("Could not connect to stratum server " + m_host + ":" + m_port + " : " + ec.message());
