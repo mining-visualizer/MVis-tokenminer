@@ -50,12 +50,15 @@ public:
 	);
 	~EthStratumClient();
 
-	void start(bool _verbose = true);
-	bool isRunning() { return m_running; }
-	bool isConnected() { return m_connected && m_authorized; }
+	void restart();
+	bool isRunning();
+	bool isConnected();
 	void submitWork(h256 _nonce, bytes _hash, bytes _challenge, uint64_t _difficulty);
 	void getWork(bytes& _challenge, h256& _target, uint64_t& _difficulty, string& _hashingAcct);
 	void disconnect();
+	void setVerbosity(bool _verbose);
+	void setUserAcct(string _userAcct);
+	void switchAcct(string _newAcct);
 
 private:
 	void connectStratum();
@@ -77,13 +80,13 @@ private:
 
 	bool m_authorized;	// we're subscribed to the pool
 	bool m_connected;	// this refers to a TCP connection
-	bool m_running;		// the TCP worker thread is running & listening
+	bool m_running;		// the Boost::Asio worker thread is running & listening
 
 	int	m_retries = 0;
 	int	m_maxRetries;
 	int m_worktimeout;
 	bool m_failoverAvailable;
-	bool m_verbose;
+	bool m_verbose = true;
 
 	boost::asio::io_service m_io_service;
 	tcp::socket m_socket;

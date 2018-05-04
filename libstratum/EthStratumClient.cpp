@@ -24,7 +24,7 @@ using boost::asio::ip::tcp;
 #define BOOST_ASIO_ENABLE_CANCELIO 
 
 EthStratumClient::EthStratumClient(
-	string const & host, 
+	string const & host,
 	string const & port,
 	int const & retries,
 	int const & worktimeout,
@@ -38,7 +38,6 @@ EthStratumClient::EthStratumClient(
 
 	m_authorized = false;
 	m_connected = false;
-	m_running = true;
 	m_failoverAvailable = retries != 0;
 	m_maxRetries = m_failoverAvailable ? retries : c_StopWorkAt;
 	m_retries = 0;
@@ -54,12 +53,6 @@ EthStratumClient::~EthStratumClient()
 	m_io_service.stop();
 }
 
-void EthStratumClient::start(bool _verbose)
-{
-	m_verbose = _verbose;
-
-}
-
 
 /*-----------------------------------------------------------------------------------
 * launchIOS
@@ -67,6 +60,7 @@ void EthStratumClient::start(bool _verbose)
 void EthStratumClient::launchIOS()
 {
 
+	m_running = true;
 	connectStratum();
 
 	boost::thread bt([&] () {
@@ -89,6 +83,11 @@ void EthStratumClient::launchIOS()
 			}
 		}
 	});
+}
+
+void EthStratumClient::restart()
+{
+	launchIOS();
 }
 
 void EthStratumClient::connectStratum()
@@ -329,4 +328,35 @@ void EthStratumClient::getWork(bytes& _challenge, h256& _target, uint64_t& _diff
 	_target = m_target;
 	_difficulty = m_difficulty;
 	_hashingAcct = m_hashingAcct;
+}
+
+void EthStratumClient::setVerbosity(bool _verbose)
+{
+	m_verbose = _verbose;
+}
+
+void EthStratumClient::setUserAcct(string _userAcct)
+{
+	m_userAcct = _userAcct;
+}
+
+bool EthStratumClient::isRunning() 
+{ 
+	return m_running; 
+}
+
+bool EthStratumClient::isConnected() 
+{ 
+	return m_connected && m_authorized; 
+}
+
+void EthStratumClient::switchAcct(string _newAcct)
+{
+	m_verbose = false;
+	disconnect();
+	m_userAcct = _newAcct;
+	this_thread::sleep_for(chrono::milliseconds(50));
+	restart();
+	this_thread::sleep_for(chrono::milliseconds(50));
+	m_verbose = true;
 }
