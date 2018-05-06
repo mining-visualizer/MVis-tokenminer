@@ -293,7 +293,7 @@ void EthStratumClient::writeStratum(Json::Value _json)
 {
 	Json::FastWriter fw;
 	std::string msg = fw.write(_json);
-	LogF << "Stratum.Send: " << msg;
+	LogF << "Stratum.Send : " << msg;
 	std::ostream os(&m_requestBuffer);
 	os << msg;
 	boost::system::error_code ec;
