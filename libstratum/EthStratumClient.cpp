@@ -24,49 +24,47 @@ using boost::asio::ip::tcp;
 #define BOOST_ASIO_ENABLE_CANCELIO 
 
 EthStratumClient::EthStratumClient(
-	GenericFarm<EthashProofOfWork>* f, 
-	MinerType m, 
-	string const & host, 
+	string const & host,
 	string const & port,
-	string const & password,
 	int const & retries,
-	int const & worktimeout
+	int const & worktimeout,
+	string const & userAcct
 )
 	: m_socket(m_io_service)
 {
-	// Note: host should not include the "http://" prefix.
-	m_host = host;
+	m_host = checkHost(host);
 	m_port = port;
-	m_password = password;
+	m_userAcct = userAcct;
 
 	m_authorized = false;
 	m_connected = false;
-	m_running = true;
 	m_failoverAvailable = retries != 0;
 	m_maxRetries = m_failoverAvailable ? retries : c_StopWorkAt;
 	m_retries = 0;
 	m_worktimeout = worktimeout;
 
-	p_farm = f;
-	
-	//f->onSolutionFound([&] (EthashProofOfWork::Solution sol, int miner) {
-	//	m_solutionMiner = miner;
-	//	if (isConnected())
-	//		submit(sol);
-	//	else
-	//		LogB << "Can't submit solution: Not connected";
-	//	return false;
-	//});
-
 	p_worktimer = nullptr;
 
 	launchIOS();
-
 }
 
 EthStratumClient::~EthStratumClient()
 {
 	m_io_service.stop();
+}
+
+string EthStratumClient::checkHost(string _host)
+{
+	// boost asio doesn't like the http:// prefix (stratum mining)
+	// json rpc (FarmClient) is ok with it though.
+
+	size_t p;
+	if ((p = _host.find("://")) != string::npos)
+	{
+		_host = _host.substr(p + 3, string::npos);
+	}
+
+	return _host;
 }
 
 /*-----------------------------------------------------------------------------------
@@ -75,6 +73,7 @@ EthStratumClient::~EthStratumClient()
 void EthStratumClient::launchIOS()
 {
 
+	m_running = true;
 	connectStratum();
 
 	boost::thread bt([&] () {
@@ -99,14 +98,27 @@ void EthStratumClient::launchIOS()
 	});
 }
 
+void EthStratumClient::restart()
+{
+	launchIOS();
+}
+
 void EthStratumClient::connectStratum()
 {
-	LogB << "Connecting to stratum server " << m_host + ":" + m_port << " ...";
+	if (m_verbose)
+		LogB << "Connecting to stratum server " << m_host + ":" + m_port << " ...";
 	tcp::resolver resolver(m_io_service);
 	tcp::resolver::query query(m_host, m_port);
 
 	boost::system::error_code ec;
-	connect(m_socket, resolver.resolve(query), ec);
+	try
+	{
+		connect(m_socket, resolver.resolve(query), ec);
+	}
+	catch (const std::exception& e)
+	{
+		LogB << "Exception: EthStratumClient::connectStratum - " << e.what();
+	}
 	if (ec)
 	{
 		reconnect("Could not connect to stratum server " + m_host + ":" + m_port + " : " + ec.message());
@@ -115,17 +127,22 @@ void EthStratumClient::connectStratum()
 	m_connected = true;
 	m_retries = 0;
 
-	std::ostream os(&m_requestBuffer);
-	os << "{\"id\": 1, \"method\": \"mining.subscribe\", \"params\": []}\n";
-	writeStratum(m_requestBuffer);
+	Json::Value msg;
+	msg["id"] = 1;
+	msg["method"] = "mining.subscribe";
+	msg["params"].append(m_userAcct);
+	writeStratum(msg);
+
 	readline();
 }
 
 
 void EthStratumClient::disconnect()
 {
-	LogS << "Disconnecting from stratum server";
+	if (m_verbose)
+		LogS << "Disconnecting from stratum server";
 	m_connected = false;
+	m_authorized = false;
 	m_running = false;
 	m_socket.close();
 	m_io_service.stop();
@@ -141,7 +158,7 @@ void EthStratumClient::reconnect(string msg)
 	{
 		// if there's a failover available, we'll switch to it, but worst case scenario, it could be 
 		// unavailable as well, so at some point we should pause mining.  we'll do it here.
-		m_current.reset();
+		//m_current.reset();
 		//p_farm->setWork(m_current);
 		LogB << "Mining paused ...";
 		if (m_failoverAvailable)
@@ -199,123 +216,93 @@ void EthStratumClient::readResponse(const boost::system::error_code& ec, std::si
 	}
 }
 
+
 void EthStratumClient::processReponse(Json::Value& responseObject)
 {
-	Json::Value error = responseObject.get("error", new Json::Value);
-	if (error.isArray())
+	if (!validInput(responseObject))
 	{
-		string msg = error.get(1, "Unknown error").asString();
-		LogB << msg;
-	}
-	std::ostream os(&m_requestBuffer);
-	Json::Value params;
-	int id = responseObject.get("id", Json::Value::null).asInt();
-	switch (id)
+		LogB << "Invalid JSON response from pool: " << responseObject.toStyledString();
+		return;
+	}	
+
+	switch (responseObject["id"].asInt())
 	{
-		case 1:
-		{
-			LogB << "Connection established";
-			params = responseObject.get("result", Json::Value::null);
-			if (params.isArray())
-				setWork(params);
-
-			os << "{\"id\": 3, \"method\": \"mining.authorize\", \"params\": [\"\",\"" << m_password << "\"]}\n";
-			writeStratum(m_requestBuffer);
-		}
-		break;
-	case 2:
-		// nothing to do...
-		break;
-	case 3:
-		m_authorized = responseObject.get("result", Json::Value::null).asBool();
-		if (!m_authorized)
-		{
-			LogB << "Stratum logon rejected. Worker not authorized.";
-			if (!m_failoverAvailable)
-				exit(-1);
-			disconnect();
-			return;
-		}
-		break;
-	case 4:
-		if (responseObject.get("result", false).asBool())
-			p_farm->recordSolution(SolutionState::Accepted, m_stale, m_solutionMiner);
-		else
-			p_farm->recordSolution(SolutionState::Rejected, m_stale, m_solutionMiner);
-		break;
-	default:
-		string method = responseObject.get("method", "").asString();
-
-		if (method == "mining.notify")
-		{
-			params = responseObject.get("params", Json::Value::null);
-			if (params.isArray())
-				setWork(params);
-		}
-		else if (method == "client.get_version")
-		{
-			os << "{\"error\": null, \"id\" : " << id << ", \"result\" : \"" << ETH_PROJECT_VERSION << "\"}\n";
-			writeStratum(m_requestBuffer);
-		}
-		break;
+		case 1:		// response from mining.subscribe
+			
+			if (responseObject["result"].asBool())
+			{
+				if (m_verbose)
+					LogB << "Connection established";
+				m_authorized = true;
+			} 
+			else
+			{
+				reconnect("Pool login rejected. Reason given : " + responseObject["error"][1].asString());
+				return;
+			}
+			break;
+		case 4:		// response from mining.submit
+			if (!responseObject["result"].asBool())
+			{
+				LogB << "Solution was rejected by the pool. Reason : " << responseObject["error"][1].asString();
+			}
+			break;
+		default:
+			if (responseObject["method"].asString() == "mining.notify")
+			{
+				Guard l(x_work);
+				m_challenge = fromHex(responseObject["params"][0].asString());
+				m_target = u256(responseObject["params"][1].asString());
+				m_difficulty = atoll(responseObject["params"][2].asString().c_str());
+				m_hashingAcct = responseObject["params"][3].asString();
+			} 
+			else
+			{
+				LogB << "Unexpected JSON notification from pool : " << responseObject.toStyledString();
+			}
+			break;
 	}
-
 }
 
-void EthStratumClient::writeStratum(boost::asio::streambuf& buff)
+bool EthStratumClient::validInput(Json::Value _json)
 {
+	if (_json.isMember("result"))
+	{
+		if (!_json.isMember("error"))
+			return false;
+
+		if (!_json["result"].asBool() && (!_json["error"].isArray() || _json["error"].size() < 2))
+			return false;
+
+		return true;
+	} 
+	else if (_json.isMember("method"))
+	{
+		if (!_json.isMember("params") || !_json["params"].isArray())
+			return false;
+
+		return true;
+	} 
+	else
+	{
+		return false;
+	}
+}
+
+void EthStratumClient::writeStratum(Json::Value _json)
+{
+	Json::FastWriter fw;
+	std::string msg = fw.write(_json);
+	LogF << "Stratum.Send : " << msg;
+	std::ostream os(&m_requestBuffer);
+	os << msg;
 	boost::system::error_code ec;
-	string s = streamBufToStr(buff);
-	LogF << "Stratum.Send: " << s;
-	write(m_socket, buff, ec);
+	write(m_socket, m_requestBuffer, ec);
 	if (ec)
 	{
 		LogB << "Error writing to stratum socket : " << ec.message();
-		LogD << "  - was attempting to send : " << s;
+		LogD << "  - was attempting to send : " << msg;
 		reconnect("");
-	}
-}
-
-void EthStratumClient::setWork(Json::Value params)
-{
-	string sHeaderHash = params.get((Json::Value::ArrayIndex)1, "").asString();
-	string sSeedHash = params.get((Json::Value::ArrayIndex)2, "").asString();
-	string sShareTarget = params.get((Json::Value::ArrayIndex)3, "").asString();
-
-	if (sHeaderHash != "" && sSeedHash != "" && sShareTarget != "")
-	{
-		h256 seedHash = h256(sSeedHash);
-		h256 headerHash = h256(sHeaderHash);
-
-		if (headerHash != m_current.headerHash)
-		{
-			if (p_worktimer)
-				p_worktimer->cancel();
-
-			m_previous.headerHash = m_current.headerHash;
-			m_previous.seedHash = m_current.seedHash;
-			m_previous.boundary = m_current.boundary;
-
-			m_current.headerHash = headerHash;
-			m_current.seedHash = seedHash;
-			m_current.boundary = h256(sShareTarget);
-
-			try
-			{
-				string sBlocknumber = params.get((Json::Value::ArrayIndex)4, "").asString();
-				unsigned blockNum = (sBlocknumber == "") ? 0 : std::stoul(sBlocknumber, nullptr, 16);
-				if (m_onWorkPackage)
-					m_onWorkPackage(blockNum);
-			}
-			catch (const std::exception& e)
-			{
-				LogB << "Error in EthStratumClient::setWork. Unable to convert block number. " << e.what();
-			}
-
-			//p_farm->setWork(m_current);
-			p_worktimer = new boost::asio::deadline_timer(m_io_service, boost::posix_time::seconds(m_worktimeout));
-			p_worktimer->async_wait(boost::bind(&EthStratumClient::work_timeout_handler, this, boost::asio::placeholders::error));
-		}
 	}
 }
 
@@ -327,40 +314,18 @@ void EthStratumClient::work_timeout_handler(const boost::system::error_code& ec)
 	}
 }
 
-bool EthStratumClient::submit(EthashProofOfWork::Solution solution) {
-	EthashProofOfWork::WorkPackage tempWork(m_current);
-	EthashProofOfWork::WorkPackage tempPreviousWork(m_previous);
+void EthStratumClient::submitWork(h256 _nonce, bytes _hash, bytes _challenge, uint64_t _difficulty) {
 
-	LogB << "Solution found; Submitting to " << m_host << "...";
+	Json::Value msg;
 
-	if (EthashAux::eval(tempWork.seedHash, tempWork.headerHash, solution.nonce).value < tempWork.boundary)
-	{
-		string json;
-
-		json = "{\"id\": 4, \"method\": \"mining.submit\", \"params\": [\"\",\"\",\"0x" + solution.nonce.hex() + "\",\"0x" + tempWork.headerHash.hex() + "\",\"0x" + solution.mixHash.hex() + "\"]}\n";
-		std::ostream os(&m_requestBuffer);
-		os << json;
-		m_stale = false;
-		writeStratum(m_requestBuffer);
-		return true;
-	}
-	else if (EthashAux::eval(tempPreviousWork.seedHash, tempPreviousWork.headerHash, solution.nonce).value < tempPreviousWork.boundary)
-	{
-		string json;
-
-		json = "{\"id\": 4, \"method\": \"mining.submit\", \"params\": [\"\",\"\",\"0x" + solution.nonce.hex() + "\",\"0x" + tempPreviousWork.headerHash.hex() + "\",\"0x" + solution.mixHash.hex() + "\"]}\n";
-		std::ostream os(&m_requestBuffer);
-		os << json;
-		m_stale = true;
-		writeStratum(m_requestBuffer);
-		return true;
-	}
-	else {
-		m_stale = false;
-		p_farm->recordSolution(SolutionState::Failed, NULL, m_solutionMiner);
-	}
-
-	return false;
+	msg["id"] = 4;
+	msg["method"] = "mining.submit";
+	msg["params"].append("0x" + _nonce.hex());
+	msg["params"].append(m_userAcct);
+	msg["params"].append("0x" + toHex(_hash));
+	msg["params"].append((Json::UInt64)_difficulty);
+	msg["params"].append("0x" + toHex(_challenge));
+	writeStratum(msg);
 }
 
 string EthStratumClient::streamBufToStr(boost::asio::streambuf& buff)
@@ -377,3 +342,32 @@ void EthStratumClient::logJson(Json::Value _json)
 	LogF << "Stratum.Recv: " << fw.write(_json);
 }
 
+void EthStratumClient::getWork(bytes& _challenge, h256& _target, uint64_t& _difficulty, string& _hashingAcct)
+{
+	Guard l(x_work);
+	_challenge = m_challenge;
+	_target = m_target;
+	_difficulty = m_difficulty;
+	_hashingAcct = m_hashingAcct;
+}
+
+bool EthStratumClient::isRunning() 
+{ 
+	return m_running; 
+}
+
+bool EthStratumClient::isConnected() 
+{ 
+	return m_connected && m_authorized; 
+}
+
+void EthStratumClient::switchAcct(string _newAcct)
+{
+	m_verbose = false;
+	disconnect();
+	m_userAcct = _newAcct;
+	this_thread::sleep_for(chrono::milliseconds(50));
+	restart();
+	this_thread::sleep_for(chrono::milliseconds(50));
+	m_verbose = true;
+}

@@ -132,12 +132,6 @@ public:
 	{
 		string s = string(_argN);
 		LowerCase(s);
-		// boost asio doesn't like the http:// prefix (stratum mining)
-		//if (s.find("http") != string::npos)
-		//{
-		//	LogS << "Invalid " << _arg << " argument. Do not specify the 'http://' prefix, just IP or Host.";
-		//	return false;
-		//}
 
 		size_t p = s.find_last_of(":");
 		if (p > 0)
@@ -429,24 +423,24 @@ public:
 			exit(0);
 		}
 
-		string mAcct = ProgOpt::Get("0xBitcoin", "MinerAcct");
-		LowerCase(mAcct);
+		m_userAcct = ProgOpt::Get("0xBitcoin", "MinerAcct");
+		LowerCase(m_userAcct);
 		u256 mAcctNum;
 		try
 		{
-			mAcctNum = u256(mAcct);
+			mAcctNum = u256(m_userAcct);
 		}
 		catch (...)
 		{
 			LogS << "'MinerAcct' contains invalid characters in tokenminer.ini";
 			exit(0);
 		}
-		if (mAcct.substr(0, 2) != "0x")
+		if (m_userAcct.substr(0, 2) != "0x")
 		{
 			LogS << "Invalid 'MinerAcct' in tokenminer.ini - Miner account should start with '0x'";
 			exit(0);
 		}
-		if (mAcctNum == 0 || mAcct.length() != 42)
+		if (mAcctNum == 0 || m_userAcct.length() != 42)
 		{
 			LogS << "Invalid 'MinerAcct' in tokenminer.ini";
 			exit(0);
@@ -546,7 +540,7 @@ public:
 				if (m_nodes[i].url != "")
 				{
 					if (m_nodes[i].stratumPort != "")
-						doStratum(f, m_nodes[i].url, m_nodes[i].rpcPort, m_nodes[i].stratumPort, m_nodes[i].stratumPwd);
+						doStratum(f, m_nodes[i].url, m_nodes[i].rpcPort, m_nodes[i].stratumPort);
 					else
 						doFarm(f, m_nodes[i].url, m_nodes[i].rpcPort);
 				}
@@ -806,22 +800,19 @@ private:
 	{
 		#define FEEBLOCKTIME 4 * 60 * 60		// devFee switching is done in 4 hour blocks
 
-		//string sDevPercent = ProgOpt::Get("General", "DevFee", "2.0");
-		string sDevPercent = "1.0";
+		string sDevPercent = ProgOpt::Get("General", "DevFee", "1.0");
+		float nDevPercent;
 		if (!isNumeric(sDevPercent))
+			nDevPercent = 1.0;
+		else
 		{
-			LogB << "Invalid DevFee in tokenminer.ini!  Defaulting to 1.0%.";
-			sDevPercent = "1.0";
+			nDevPercent = std::stod(sDevPercent);
+			nDevPercent = nDevPercent < 1.0 ? 1.0 : nDevPercent;
 		}
-		_devFeeTime = std::stod(sDevPercent) / 100.0 * FEEBLOCKTIME;
-		if (_devFeeTime < 0)
-		{
-			LogB << "Invalid DevFee in tokenminer.ini!  Defaulting to 1.0%.";
-			_devFeeTime = 1.0 / 100.0 * FEEBLOCKTIME;
-		}
-		_userFeeTime = FEEBLOCKTIME - _devFeeTime;
-		_nextDevFeeSwitch = _devFeeTime == 0 ? 0 : _userFeeTime;
 
+		_devFeeTime = nDevPercent / 100.0 * FEEBLOCKTIME;
+		_userFeeTime = FEEBLOCKTIME - _devFeeTime;
+		_nextDevFeeSwitch = _devFeeTime == 0 ? 0 : (FEEBLOCKTIME / 2);
 	}
 
 	/*-----------------------------------------------------------------------------------
@@ -857,17 +848,17 @@ private:
 		// if pool mining, workRPC points to the mining pool, and nodeRPC points to Infura
 
 		jsonrpc::HttpClient client(_nodeURL + ":" + _rpcPort);
-		FarmClient workRPC(client, m_opMode);
+		FarmClient workRPC(client, m_opMode, m_userAcct);
 
 		jsonrpc::HttpClient* nodeClient;
 		FarmClient* nodeRPC = &workRPC;
 		if (m_opMode == OperationMode::Pool)
 		{
 			nodeClient = new jsonrpc::HttpClient("https://mainnet.infura.io/J9KBwsJ0q1LMIQvzDlGC:8545");
-			nodeRPC = new FarmClient(*nodeClient, OperationMode::Solo);
+			nodeRPC = new FarmClient(*nodeClient, OperationMode::Solo, m_userAcct);
 		}
 		else
-			f.hashingAcct = workRPC.userAcct;
+			f.hashingAcct = m_userAcct;
 		h256 target;
 		bytes challenge;
 		deque<bytes> recentChallenges;
@@ -1043,34 +1034,120 @@ private:
 	/*-----------------------------------------------------------------------------------
 	* doStratum
 	*----------------------------------------------------------------------------------*/
-	void doStratum(GenericFarm<EthashProofOfWork>& f, string _nodeURL, string _rpcPort, string _stratumPort, string _stratumPwd)
+	void doStratum(GenericFarm<EthashProofOfWork>& f, string _nodeURL, string _rpcPort, string _stratumPort)
 	{
-		// retry of zero means retry forever, since there is no failover.
-		int maxRetries = failOverAvailable() ? m_maxFarmRetries : 0;
-		EthStratumClient client(&f, m_minerType, _nodeURL, _stratumPort, _stratumPwd, maxRetries, m_worktimeout);
 
 		Timer lastHashRateDisplay;
 		Timer lastBlockTime;
+		Timer lastBalanceCheck;
+		Timer devFeeSwitch;
 
-		client.onWorkPackage([&] (unsigned int _blockNumber) {
-			f.currentBlock = _blockNumber;
-			lastBlockTime.restart();
-		});
+		uint64_t difficulty = 0;
+		h256 target;
+		bytes challenge;
 
-		while (client.isRunning())
+		h256 solution;
+		int solutionMiner = -1;
+
+		// the absolute value of nextDevFeeSwitch is the time until the next switch.
+		// if the value is >= 0, that means we are currently mining to the user's account,
+		// if it's negative, we are mining to the dev account.
+		int nextDevFeeSwitch;
+
+		// the amount of time to spend mining for the user/dev respectively
+		int userFeeTime, devFeeTime;
+
+		calcDevFeeTimes(nextDevFeeSwitch, userFeeTime, devFeeTime);
+
+		// retry of zero means retry forever, since there is no failover.
+		int maxRetries = failOverAvailable() ? m_maxFarmRetries : 0;
+		EthStratumClient* client = new EthStratumClient(_nodeURL, _stratumPort, maxRetries, m_worktimeout, m_userAcct);
+
+		jsonrpc::HttpClient rpcClient("https://mainnet.infura.io/J9KBwsJ0q1LMIQvzDlGC:8545");
+		FarmClient nodeRPC(rpcClient, OperationMode::Solo, m_userAcct);
+
+		int tokenBalance = nodeRPC.tokenBalance();
+
+		while (client->isRunning())
 		{
-			if (lastHashRateDisplay.elapsedSeconds() >= 2.0 && client.isConnected() && f.isMining())
+
+			while (!f.solutionFound(solution, solutionMiner) && !f.shutDown && client->isRunning())
 			{
-				//positionedOutput(f, lastBlockTime, 0);
-				lastHashRateDisplay.restart();
+				if (lastHashRateDisplay.elapsedSeconds() >= 2.0 && client->isConnected() && f.isMining())
+				{
+					positionedOutput(OperationMode::Pool, f, lastBlockTime, tokenBalance, difficulty, target);
+					lastHashRateDisplay.restart();
+				}
+
+				h256 _target;
+				bytes _challenge;
+				client->getWork(_challenge, _target, difficulty, f.hashingAcct);
+				// if we're choosing our own difficulty instead of using the pools, calcFinalTarget will make the adjustment
+				calcFinalTarget(f, _target, difficulty);
+
+				if (_challenge != challenge)
+				{
+					challenge = _challenge;
+					target = _target;
+					LogB << "New challenge : " << toHex(_challenge).substr(0, 8);
+					f.setWork(challenge, target);
+				}
+				if (_target != target)
+				{
+					target = _target;
+					f.setWork(challenge, target);
+				}
+
+				if (lastBalanceCheck.elapsedSeconds() >= 60)
+				{
+					tokenBalance = nodeRPC.tokenBalance();
+					lastBalanceCheck.restart();
+				}
+
+				if (nextDevFeeSwitch != 0 && devFeeSwitch.elapsedSeconds() > abs(nextDevFeeSwitch))
+				{
+					if (nextDevFeeSwitch < 0)
+					{
+						LogB << "Switching to user mining.";
+						nextDevFeeSwitch = userFeeTime;
+						client->switchAcct(m_userAcct);
+					} else
+					{
+						LogB << "Switching to dev fee mining.";
+						nextDevFeeSwitch = (-1) * devFeeTime;
+						client->switchAcct(DonationAddress);
+					}
+					devFeeSwitch.restart();
+				}
+				
+				this_thread::sleep_for(chrono::milliseconds(200));
 			}
-			this_thread::sleep_for(chrono::milliseconds(200));
+
+			if (f.shutDown)
+				break;
+
+			if (solutionMiner != -1)
+			{
+				bytes hash(32);
+				h160 sender(f.hashingAcct);
+				keccak256_0xBitcoin(challenge, sender, solution, hash);
+				if (h256(hash) < target)
+				{
+					LogS << "Solution found; Submitting to pool";
+					LogD << "Solution found: challenge = " << toHex(challenge).substr(0, 8) << ", nonce = " << solution.hex().substr(0, 8);
+					client->submitWork(solution, hash, challenge, difficulty);
+					f.recordSolution(SolutionState::Accepted, false, solutionMiner);
+				} else
+				{
+					LogB << "Solution found, but invalid.  Possibly stale.";
+					f.recordSolution(SolutionState::Accepted, true, solutionMiner);
+				}
+				solutionMiner = -1;
+			}
+
 		}
 
-
 	}	// doStratum
-
-public:
 
 
 private:
@@ -1121,4 +1198,7 @@ private:
 	unsigned m_pollingInterval = 2000;
 	unsigned m_worktimeout = 180;
 	bool m_shutdown = false;
+
+	string m_userAcct;
+
 };
