@@ -66,6 +66,43 @@ public:
 
 	void getWorkPool(bytes& _challenge, h256& _target, uint64_t& _difficulty, string& _hashingAcct)
 	{
+		jsonrpc::BatchCall batchCall = jsonrpc::BatchCall();
+
+		Json::Value data;
+		data.append(m_userAcct);
+
+		// the first 2 calls don't need any parameter input, but there seems to be a bug in
+		// the libjson-rpc-cpp package, such that it produces invalid JSON request if you just
+		// do something like : batchCall.addCall("getChallengeNumber", Json::Value());
+		// so I pass in some data which luckily the pool ignores, and sends me the information I want.
+
+		int challengeID = batchCall.addCall("getChallengeNumber", data);
+		int poolAddressID = batchCall.addCall("getPoolEthAddress", data);
+		int targetID = batchCall.addCall("getMinimumShareTarget", data);
+		int difficultyID = batchCall.addCall("getMinimumShareDifficulty", data);
+
+		jsonrpc::BatchResponse response = CallProcedures(batchCall);
+
+		if (response.hasErrors())
+		{
+			LogB << "Error in getWorkPool: JSON-RPC call resulted in errors";
+		}
+
+		_challenge = fromHex(response.getResult(challengeID).asString());
+		m_target = u256(response.getResult(targetID).asString());
+		m_hashingAcct = response.getResult(poolAddressID).asString();
+		m_difficulty = atoll(response.getResult(difficultyID).asString().c_str());
+
+		_target = m_target;
+		_difficulty = m_difficulty;
+		_hashingAcct = m_hashingAcct;
+		LogF << "Trace: getWorkPool - challenge:" << toHex(_challenge).substr(0, 8) 
+			<< ", target:" << std::hex << std::setw(16) << std::setfill('0') << upper64OfHash(_target) 
+			<< ", difficulty:" << std::dec << _difficulty;
+	}
+
+	void getWorkPool_old(bytes& _challenge, h256& _target, uint64_t& _difficulty, string& _hashingAcct)
+	{
 		static Timer s_lastFetch;
 		Json::Value data;
 		Json::Value result;
@@ -74,7 +111,7 @@ public:
 		data.append(m_userAcct);
 		result = CallMethod("getMinimumShareTarget", data);
 		m_target = u256(result.asString());
-		
+
 		if (s_lastFetch.elapsedSeconds() > 20 || m_hashingAcct == "")
 		{
 			// no reason to retrieve this stuff every time.
@@ -88,8 +125,8 @@ public:
 		_target = m_target;
 		_difficulty = m_difficulty;
 		_hashingAcct = m_hashingAcct;
-		LogF << "Trace: getWorkPool - challenge:" << toHex(_challenge).substr(0, 8) 
-			<< ", target:" << std::hex << std::setw(16) << std::setfill('0') << upper64OfHash(_target) 
+		LogF << "Trace: getWorkPool - challenge:" << toHex(_challenge).substr(0, 8)
+			<< ", target:" << std::hex << std::setw(16) << std::setfill('0') << upper64OfHash(_target)
 			<< ", difficulty:" << std::dec << _difficulty;
 	}
 

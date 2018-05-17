@@ -30,7 +30,7 @@ MinerAcct=0x1234512345123451234512345123451234512345
 ```
 * All other settings in the `[0xBitcoin]` section can be left as is.
 * You can also specify the pool mining address on the command line (-N).  See below for all command line options.
-* If you mining pool supports the **stratum protocol**, change the `RPCPort=8586` line to `StratumPort=9192`.  Consult with your mining pool for the actual port #.
+* If your mining pool supports the **stratum protocol**, change the `RPCPort=8586` line to `StratumPort=9192`.  Consult with your mining pool for the actual port # to use.
 * For **Solo Mining**:
     * Input an ETH account and associated private key. (Sorry about making you enter it in plain text format. Make sure it is a 'throw away' account with only the bare minimum amount of money.)
     * You can specify the address and port of your node in the `.ini` file, or on the command line.
