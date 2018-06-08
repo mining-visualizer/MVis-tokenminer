@@ -424,7 +424,6 @@ public:
 		}
 
 		m_userAcct = ProgOpt::Get("0xBitcoin", "MinerAcct");
-		LowerCase(m_userAcct);
 		u256 mAcctNum;
 		try
 		{
@@ -727,7 +726,7 @@ private:
 		}
 		if (_opMode == OperationMode::Solo)
 		{
-			LogXY(1, y) << "Block #: " << f.currentBlock << " | Block time: " << elapsedSeconds(lastBlockTime)
+			LogXY(1, y) << "Block #: " << f.currentBlock << " | Difficulty: " << _difficulty << " | Block time: " << elapsedSeconds(lastBlockTime)
 						<< " | Solutions: " << f.getSolutionStats().getAccepts() << " | Tokens: " << tokenBalance << "      ";
 		} 
 		else
@@ -912,7 +911,10 @@ private:
 							calcFinalTarget(f, _target, difficulty);
 						}
 						else
+						{
 							workRPC.getWorkSolo(_challenge, _target);
+							difficulty = diffFromTarget(_target);
+						}
 
 						lastGetWork.restart();
 

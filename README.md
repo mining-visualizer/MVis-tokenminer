@@ -32,7 +32,7 @@ MinerAcct=0x1234512345123451234512345123451234512345
 * You can also specify the pool mining address on the command line (-N).  See below for all command line options.
 * If your mining pool supports the **stratum protocol**, change the `RPCPort=8586` line to `StratumPort=9192`.  Consult with your mining pool for the actual port # to use.
 * For **Solo Mining**:
-    * Input an ETH account and associated private key. (Sorry about making you enter it in plain text format. Make sure it is a 'throw away' account with only the bare minimum amount of money.)
+    * Input an ETH account and associated private key. 
     * You can specify the address and port of your node in the `.ini` file, or on the command line.
     * You can enable gas price bidding.  (see comments in the file).  Note that enabling this feature does not guarantee that you will win every bid.  Network latency will sometimes result in failed transactions, even if you 'out-bid' the other transaction.
 * You can leave the .INI file in the executable folder,  or you can move it to `C:\Users\[USER]\AppData\Local\tokenminer` on Windows, or `$HOME/.config/tokenminer` on Linux.  If that folder path does not exist, you will need to create it manually. If for some reason that file exists at both locations, the one in the executable folder will take precedence. 
@@ -143,10 +143,10 @@ AcctPK=................................................................
 ; Currently, no mining pools support self-assigned difficulty.
 MinutesPerShare=Pool
 
-; The remaining settings in this section apply only to SOLO MINING:
-
 ; 0xBitcoin contract address. normally you will not change this.
 TokenContract=0xb6ed7644c69416d67b522e20bc294a9a9b405b31
+
+; THE REMAINING SETTINGS IN THIS SECTION APPLY ONLY TO SOLO MINING:
 
 ; when your miner finds a solution, transactions will be submitted with this 
 ; amount of gas (gwei).  You can change this setting 'on the fly' (without having
@@ -212,7 +212,7 @@ cmake -G "Visual Studio 12 2013 Win64" ..
 
 ### Building on Ubuntu
 
-Ubuntu 16.04, OpenCL only (**for AMD cards**)
+This has only been verified to work with Ubuntu 16.04.  OpenCL only (**for AMD cards**)
 
 ```bash
 sudo apt-get update
