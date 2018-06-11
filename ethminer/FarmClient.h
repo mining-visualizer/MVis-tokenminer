@@ -453,7 +453,7 @@ public:
 		}
 		catch (std::exception& e)
 		{
-			LogB << "Error in routine tokenBalance: " << e.what();
+			LogD << "Error in routine tokenBalance: " << e.what();
 			return 0;
 		}
 	}

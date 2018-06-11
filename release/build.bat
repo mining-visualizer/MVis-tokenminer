@@ -16,11 +16,17 @@ cd %~dp0
 IF ERRORLEVEL 1 GOTO ERROR
 
 
-REM Copy tokenminer.ini and Readme file 
+REM Copy tokenminer.ini
+
 copy "..\tokenminer.ini" stage\tokenminer
-copy "..\Readme.md" stage
+
+REM convert readme to html and copy to staging.  see https://github.com/joeyespo/grip
+
+grip ../readme.md --export ./stage/readme.html
+
 
 REM Copy binaries
+
 copy "..\build\ethminer\release\tokenminer.exe" stage\tokenminer
 copy "..\build\ethminer\release\libcurl.dll" stage\tokenminer
 copy "..\build\ethminer\release\libmicrohttpd-dll.dll" stage\tokenminer

@@ -1006,7 +1006,9 @@ private:
 			catch (jsonrpc::JsonRpcException& e)
 			{
 				connectedToNode = false;
-				LogB << "An error occurred communicating with the node : " << e.what();
+				string msg = (m_opMode == OperationMode::Pool) ? "mining pool" : "node";
+				LogB << "An error occurred communicating with your " << msg << ". Please check your host/port settings.";
+				LogB << "Error text: " << e.what();
 				LogS << "Trying again in 5 seconds ...";
 				farmRetries++;
 				if (farmRetries == maxRetries)
