@@ -799,14 +799,22 @@ private:
 	{
 		#define FEEBLOCKTIME 4 * 60 * 60		// devFee switching is done in 4 hour blocks
 
-		string sDevPercent = ProgOpt::Get("General", "DevFee", "1.0");
 		float nDevPercent;
-		if (!isNumeric(sDevPercent))
-			nDevPercent = 1.0;
+
+		if (m_opMode != OperationMode::Pool)
+		{
+			nDevPercent = 0.0;
+		}
 		else
 		{
-			nDevPercent = std::stod(sDevPercent);
-			nDevPercent = nDevPercent < 1.0 ? 1.0 : nDevPercent;
+			string sDevPercent = ProgOpt::Get("General", "DevFee", "1.0");
+			if (!isNumeric(sDevPercent))
+				nDevPercent = 1.0;
+			else
+			{
+				nDevPercent = std::stod(sDevPercent);
+				nDevPercent = nDevPercent < 1.0 ? 1.0 : nDevPercent;
+			}
 		}
 
 		_devFeeTime = nDevPercent / 100.0 * FEEBLOCKTIME;

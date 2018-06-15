@@ -640,6 +640,7 @@ bool ethash_cl_miner::init(unsigned _platformId, unsigned _deviceId)
 		string platformName = string(platforms[_platformId].getInfo<CL_PLATFORM_NAME>().c_str());
 
 		int platformId = OPENCL_PLATFORM_UNKNOWN;
+
 		if (platformName == "NVIDIA CUDA")
 		{
 			platformId = OPENCL_PLATFORM_NVIDIA;
