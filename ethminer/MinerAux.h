@@ -726,7 +726,7 @@ private:
 		}
 		if (_opMode == OperationMode::Solo)
 		{
-			LogXY(1, y) << "Block #: " << f.currentBlock << " | Difficulty: " << _difficulty << " | Block time: " << elapsedSeconds(lastBlockTime)
+			LogXY(1, y) << "Block #: " << f.currentBlock << " | Block time: " << elapsedSeconds(lastBlockTime) << " | Difficulty: " << _difficulty 
 						<< " | Solutions: " << f.getSolutionStats().getAccepts() << " | Tokens: " << tokenBalance << "      ";
 		} 
 		else
