@@ -45,7 +45,7 @@ public:
 
 	// Constructor
 	FarmClient(
-		jsonrpc::IClientConnector &conn, 
+		jsonrpc::IClientConnector &conn,
 		OperationMode _opMode,
 		std::string _userAcct,
 		jsonrpc::clientVersion_t type = jsonrpc::JSONRPC_CLIENT_V2
@@ -96,8 +96,8 @@ public:
 		_target = m_target;
 		_difficulty = m_difficulty;
 		_hashingAcct = m_hashingAcct;
-		LogF << "Trace: getWorkPool - challenge:" << toHex(_challenge).substr(0, 8) 
-			<< ", target:" << std::hex << std::setw(16) << std::setfill('0') << upper64OfHash(_target) 
+		LogF << "Trace: getWorkPool - challenge:" << toHex(_challenge).substr(0, 8)
+			<< ", target:" << std::hex << std::setw(16) << std::setfill('0') << upper64OfHash(_target)
 			<< ", difficulty:" << std::dec << _difficulty;
 	}
 
@@ -134,8 +134,8 @@ public:
 	{
 		// challenge
 		Json::Value p;
-		p["from"] = m_userAcct;			
-		p["to"] = m_tokenContract;		
+		p["from"] = m_userAcct;
+		p["to"] = m_tokenContract;
 
 		h256 bMethod = sha3("getChallengeNumber()");
 		std::string sMethod = toHex(bMethod, dev::HexPrefix::Add);
@@ -166,7 +166,7 @@ public:
 		if (result.isString())
 		{
 			_target = h256(result.asString());
-		} 
+		}
 		else
 			throw jsonrpc::JsonRpcException(jsonrpc::Errors::ERROR_CLIENT_INVALID_RESPONSE, result.toStyledString());
 
@@ -235,8 +235,8 @@ public:
 		m_lastSolution.restart();
 		t.nonce = m_txNonce;
 		t.receiveAddress = toAddress(m_tokenContract);
-		t.gas = u256(200000);
 		ProgOpt::Reload();
+		t.gas = atoi(ProgOpt::Get("0xBitcoin", "GasLimit").c_str());
 		m_startGas = atoi(ProgOpt::Get("0xBitcoin", "GasPrice").c_str());
 		m_maxGas = atoi(ProgOpt::Get("0xBitcoin", "MaxGasPrice").c_str());
 		t.gasPrice = RecommendedGasPrice(_challenge);
@@ -272,7 +272,7 @@ public:
 	}
 
 	// this routine runs on a separate thread
-	void txpoolScanner() 
+	void txpoolScanner()
 	{
 		Json::Value data;
 		Json::Value result;
@@ -363,7 +363,7 @@ public:
 		}
 
 		// we've only got the hashes at this point,  so now retrieve each tx
-		for (uint32_t i = 0; i < result.size(); i++) 
+		for (uint32_t i = 0; i < result.size(); i++)
 		{
 			string hash = result[i].asString();
 			data.clear();
@@ -395,7 +395,7 @@ public:
 								}
 							}
 						}
-						LogD << "Miner " << miner.account.substr(0, 10) << " submitted tx " << miner.txHash.substr(0, 10) 
+						LogD << "Miner " << miner.account.substr(0, 10) << " submitted tx " << miner.txHash.substr(0, 10)
 							<< ". gasPrice=" << miner.gasPrice << ", challenge=" << toHex(miner.challenge).substr(0, 8);
 						m_biddingMiners.push_back(miner);
 					}
@@ -427,8 +427,8 @@ public:
 
 	uint64_t tokenBalance() {
 		Json::Value p;
-		p["from"] = m_userAcct;			
-		p["to"] = m_tokenContract;			
+		p["from"] = m_userAcct;
+		p["to"] = m_tokenContract;
 
 		h256 bMethod = sha3("balanceOf(address)");
 		std::string sMethod = toHex(bMethod, dev::HexPrefix::Add);
@@ -530,7 +530,7 @@ public:
 			{
 				needsDeleting.push_back(t.challenge);
 				LogB << "Tx " << t.txHash.substr(0, 10) << " failed, gasPrice = " << t.gasPrice / 1000000000 << "  :(";
-			} 
+			}
 			else if (status == Waiting)
 			{
 				// adjust gas price if necessary
@@ -538,14 +538,14 @@ public:
 				if (t.gasPrice < recommended)
 				{
 					// increase gas price and resend
-					// but first make a copy of existing tx.  we can't be sure if the old one will get replaced 
+					// but first make a copy of existing tx.  we can't be sure if the old one will get replaced
 					// by the new one, before one or the other gets mined.
 					t.gasPrice = recommended;
 					txSignSend(t);
 					m_pendingTxs.push_back(t);
 					LogB << "Adjusting gas price to " << t.gasPrice / 1000000000 << ", new tx hash=" << t.txHash;
 				}
-			} 
+			}
 		}
 
 		for (auto challenge : needsDeleting)
@@ -566,7 +566,7 @@ public:
 		ss = std::stringstream();
 		ss << "0x" << toHex(t.rlp());
 
-		// submit to the node 
+		// submit to the node
 		Json::Value p;
 		p.append(ss.str());
 		Json::Value result = CallMethod("eth_sendRawTransaction", p);
@@ -579,7 +579,7 @@ public:
 		std::vector<byte> mix(84);
 		std::ostringstream ss;
 		Json::Value p;
-		p["from"] = _sender;        
+		p["from"] = _sender;
 		p["to"] = m_tokenContract;        // 0xbitcoin contract address
 
 		// function signature
