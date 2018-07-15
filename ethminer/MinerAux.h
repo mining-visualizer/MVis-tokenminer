@@ -866,6 +866,7 @@ private:
 		}
 		else
 			f.hashingAcct = m_userAcct;
+
 		h256 target;
 		bytes challenge;
 		deque<bytes> recentChallenges;
@@ -884,6 +885,7 @@ private:
 				{
 					if (!challenge.empty())
 					{
+						// update the display
 						if (lastHashRateDisplay.elapsedSeconds() >= 2.0 && f.isMining())
 						{
 							int blkNum = 0;
@@ -902,12 +904,15 @@ private:
 							lastHashRateDisplay.restart();
 						}
 					}
+
+					// check token balance
 					if (lastBalanceCheck.elapsedSeconds() >= 60)
 					{
 						tokenBalance = nodeRPC->tokenBalance();
 						lastBalanceCheck.restart();
 					}
 
+					// check for new work
 					h256 _target;
 					bytes _challenge;
 					if (lastGetWork.elapsedMilliseconds() > m_pollingInterval || !connectedToNode)
@@ -921,6 +926,16 @@ private:
 						else
 						{
 							workRPC.getWorkSolo(_challenge, _target);
+							if (_challenge.size() != 32)
+							{
+								LogD << "Invalid challenge received from node: " + toHex(_challenge);
+								_challenge = challenge;
+							}
+							if (u256(_target) == 0)
+							{
+								LogD << "Invalid target received from node: 0";
+								_target = target;
+							}
 							difficulty = diffFromTarget(_target);
 						}
 

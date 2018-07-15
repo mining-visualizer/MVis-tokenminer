@@ -640,7 +640,7 @@ public:
 		}
 		catch (const std::exception& e)
 		{
-			LogB << "Exception in getBlockNumber - " << e.what();
+			LogD << "Exception in getBlockNumber - " << e.what();
 			return 0;
 		}
 	}
