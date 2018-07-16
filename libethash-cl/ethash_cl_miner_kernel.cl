@@ -2,8 +2,6 @@
 #define OPENCL_PLATFORM_NVIDIA  1
 #define OPENCL_PLATFORM_AMD		2
 
-#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable 
-
 #ifndef ACCESSES
 #define ACCESSES 64
 #endif

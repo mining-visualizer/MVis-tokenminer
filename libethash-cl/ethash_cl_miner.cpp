@@ -230,26 +230,8 @@ bool ethash_cl_miner::configureGPU(
 	s_allowCPU = _allowCPU;
 	s_extraRequiredGPUMem = _extraGPUMemory;
 
-	// by default let's only consider the DAG of the first epoch
-	uint64_t dagSize = ethash_get_datasize(_currentBlock);
-	uint64_t requiredSize =  dagSize + _extraGPUMemory;
-	return searchForAllDevices(_platformId, [&requiredSize](cl::Device const& _device) -> bool
-		{
-			cl_ulong result;
-			_device.getInfo(CL_DEVICE_GLOBAL_MEM_SIZE, &result);
-			if (result >= requiredSize)
-			{
-				//std::string s = string(_device.getInfo<CL_DEVICE_NAME>().c_str());
-				//LogS << "Found suitable OpenCL device [" << s << "] with " << result << " bytes of GPU memory";
-				return true;
-			}
+	return true;
 
-			LogB << "OpenCL device " << _device.getInfo<CL_DEVICE_NAME>()
-				<< " has insufficient GPU memory." << result <<
-				" bytes of memory found < " << requiredSize << " bytes of memory required";
-			return false;
-		}
-	);
 }
 
 bool ethash_cl_miner::searchForAllDevices(function<bool(cl::Device const&)> _callback)
