@@ -49,6 +49,7 @@
 #define OPENCL_PLATFORM_UNKNOWN 0
 #define OPENCL_PLATFORM_NVIDIA  1
 #define OPENCL_PLATFORM_AMD		2
+#define OPENCL_PLATFORM_INTEL	3
 
 // workaround lame platforms
 #if !CL_VERSION_1_2
@@ -620,23 +621,16 @@ bool ethash_cl_miner::init(unsigned _platformId, unsigned _deviceId)
 
 		// just a little trick to get rid of the null at the end, which always seems to be there.
 		string platformName = string(platforms[_platformId].getInfo<CL_PLATFORM_NAME>().c_str());
+		LogS << "Using platform: " << platformName.c_str();
 
 		int platformId = OPENCL_PLATFORM_UNKNOWN;
 
 		if (platformName == "NVIDIA CUDA")
-		{
 			platformId = OPENCL_PLATFORM_NVIDIA;
-			LogS << "Using platform: " << platformName.c_str();
-		}
 		else if (platformName == "AMD Accelerated Parallel Processing")
-		{
 			platformId = OPENCL_PLATFORM_AMD;
-			LogS << "Using platform: " << platformName.c_str();
-		}
-		else
-		{
-			LogS << "\nUnknown platform!!! (" << platformName.c_str() << ").  Using generic (non-optimized) algorithms.\n";
-		}
+		else if (platformName == "Intel(R) OpenCL")
+			platformId = OPENCL_PLATFORM_INTEL;
 
 		// get GPU device of the default platform
 		vector<cl::Device> devices = getDevices(platforms, _platformId);
