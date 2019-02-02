@@ -215,7 +215,7 @@ cmake -G "Visual Studio 12 2013 Win64" ..
 
 ### Building on Ubuntu
 
-This has only been verified to work with Ubuntu 16.04.  OpenCL only (**for AMD cards**)
+This has only been verified to work with **Ubuntu 16.04**.  OpenCL only (**for AMD cards**)
 
 ```bash
 sudo apt-get update
@@ -232,6 +232,10 @@ make
 ```
 
 You can then find the executable in the `build/ethminer` subfolder
+
+##### Ubuntu 18.04
+
+Unverified: A user has reported that you can build this under Ubuntu 18.04 by simply changing `libcryptopp-dev` to `libcrypto++-dev` in the `apt-get install` command above.
 
 ### Credits
 
