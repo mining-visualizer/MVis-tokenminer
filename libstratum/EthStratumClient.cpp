@@ -266,27 +266,9 @@ void EthStratumClient::processReponse(Json::Value& responseObject)
 
 bool EthStratumClient::validInput(Json::Value _json)
 {
-	if (_json.isMember("result"))
-	{
-		if (!_json.isMember("error"))
-			return false;
 
-		if (!_json["result"].asBool() && (!_json["error"].isArray() || _json["error"].size() < 2))
-			return false;
+	return !(_json.isMember("result") && _json.isMember("error"));
 
-		return true;
-	} 
-	else if (_json.isMember("method"))
-	{
-		if (!_json.isMember("params") || !_json["params"].isArray())
-			return false;
-
-		return true;
-	} 
-	else
-	{
-		return false;
-	}
 }
 
 void EthStratumClient::writeStratum(Json::Value _json)
