@@ -83,14 +83,24 @@ public:
 
 		jsonrpc::BatchResponse response = CallProcedures(batchCall);
 
-		if (response.hasErrors())
-		{
-			LogB << "Error in getWorkPool: JSON-RPC call resulted in errors";
+		if (response.getErrorCode(challengeID)) {
+			LogB << "Error in getWorkPool: JSON-RPC call [challenge] - " << response.getErrorMessage(challengeID);
 		}
-
 		_challenge = fromHex(response.getResult(challengeID).asString());
+
+		if (response.getErrorCode(targetID)) {
+			LogB << "Error in getWorkPool: JSON-RPC call [target] - " << response.getErrorMessage(targetID);
+		}
 		m_target = u256(response.getResult(targetID).asString());
+
+		if (response.getErrorCode(poolAddressID)) {
+			LogB << "Error in getWorkPool: JSON-RPC call [poolAddress] - " << response.getErrorMessage(poolAddressID);
+		}
 		m_hashingAcct = response.getResult(poolAddressID).asString();
+
+		if (response.getErrorCode(difficultyID)) {
+			LogB << "Error in getWorkPool: JSON-RPC call [difficulty] - " << response.getErrorMessage(difficultyID);
+		}
 		m_difficulty = atoll(response.getResult(difficultyID).asString().c_str());
 
 		_target = m_target;
