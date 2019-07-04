@@ -23,14 +23,14 @@ This is a fork of my MVis-ethminer program, which was a fork of Genoil's ethmine
 ```
 [Node]
 Host=http://your_mining_pool.com   
-RPCPort=8586
+RPCPort=8080
 
 [0xBitcoin]
 MinerAcct=0x1234512345123451234512345123451234512345
 ```
 * All other settings in the `[0xBitcoin]` section can be left as is.
 * You can also specify the pool mining address on the command line (-N).  See below for all command line options.
-* If your mining pool supports the **stratum protocol**, change the `RPCPort=8586` line to `StratumPort=9192`.  Consult with your mining pool for the actual port # to use.
+* If your mining pool supports the **stratum protocol**, change the `RPCPort=8080` line to `StratumPort=8090`.  Consult with your mining pool for the actual port # to use.
 * For **Solo Mining**:
     * Input an ETH account and associated private key. 
     * You can specify the address and port of your node in the `.ini` file, or on the command line.
@@ -40,7 +40,7 @@ MinerAcct=0x1234512345123451234512345123451234512345
 * Double-click on the file `list-devices.bat`.  Examine the screen output and verify your GPU's are recognized.  Pay special attention to the PlatformID.  If it is anything other than 0, you will need to edit the `start-mining.bat` file and change the `--opencl-platform <n>` argument.
 * Start POOL MINING by double-clicking on `start-mining.bat`.
 * Start SOLO MINING with `tokenminer.exe -S -G`.  This assumes you've specified the node address in the .INI file.
-* **COOLING**: Please note that MVis-tokenminer does not have any features to set fan speeds or regulate cooling, other than shutting down if things get too hot.  Usually the AMD drivers do a pretty good job in that regard, but sometimes they don't.  It is your responsibility to monitor your fan speeds and GPU temperatures. If the AMD drivers aren't setting fan speeds high enough, you may need to use a 3rd part product,  like Speedfan or Afterburner.
+* **COOLING**: Please note that MVis-tokenminer does not have any features to set fan speeds or regulate cooling, other than shutting down if things get too hot.  Usually the AMD drivers do a pretty good job in that regard, but sometimes they don't.  It is your responsibility to monitor your fan speeds and GPU temperatures. If the AMD drivers aren't setting fan speeds high enough, you may need to use a 3rd party product,  like Speedfan or Afterburner.
 
 #### Configuration Details ####
 
@@ -103,9 +103,9 @@ Node configuration:
 ;
 ; Examples, POOL MINING:
 ;    Host=http://your_mining_pool.com   
-;    RPCPort=8586
+;    RPCPort=8080
 ;      or
-;    StratumPort=9192
+;    StratumPort=8090
 ;
 ; Examples, SOLO MINING:
 ;    Host=127.0.0.1
@@ -120,7 +120,7 @@ RPCPort=
 
 ; Secondary (failover) node/mining pool, if you have one. Default is disabled.
 ;Host=http://your_failover_mining_pool.com   
-;RPCPort=8586
+;RPCPort=8080
 
 ;--------------------------------------------------------
 [0xBitcoin]
