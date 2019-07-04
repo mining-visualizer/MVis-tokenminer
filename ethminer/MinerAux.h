@@ -123,6 +123,8 @@ public:
 		node.stratumPort = ProgOpt::Get("Node2", "StratumPort");
 		node.stratumPwd = ProgOpt::Get("Node2", "StratumPwd");
 		m_nodes.push_back(node);
+
+		m_web3Url = ProgOpt::Get("General", "Web3Url", "https://mainnet.infura.io/v3/7d1d166f63d84fc0865e5e410f583564");
 	}
 
 	/*-----------------------------------------------------------------------------------
@@ -851,6 +853,9 @@ private:
 
 		LogS << "Connecting to " << _nodeURL + ":" + _rpcPort << " ...";
 
+		// workRPC is used to get work and submit solutions
+		// nodeRPC is used to retrieve current ETH block number and query token balance
+
 		// if solo mining, both workRPC and nodeRPC point to the mainNet node (whatever the user specifies)
 		// if pool mining, workRPC points to the mining pool, and nodeRPC points to Infura
 
@@ -861,7 +866,7 @@ private:
 		FarmClient* nodeRPC = &workRPC;
 		if (m_opMode == OperationMode::Pool)
 		{
-			nodeClient = new jsonrpc::HttpClient("https://mainnet.infura.io/J9KBwsJ0q1LMIQvzDlGC:8545");
+			nodeClient = new jsonrpc::HttpClient(m_web3Url);
 			nodeRPC = new FarmClient(*nodeClient, OperationMode::Solo, m_userAcct);
 		}
 		else
@@ -1090,7 +1095,7 @@ private:
 		int maxRetries = failOverAvailable() ? m_maxFarmRetries : 0;
 		EthStratumClient* client = new EthStratumClient(_nodeURL, _stratumPort, maxRetries, m_worktimeout, m_userAcct);
 
-		jsonrpc::HttpClient rpcClient("https://mainnet.infura.io/J9KBwsJ0q1LMIQvzDlGC:8545");
+		jsonrpc::HttpClient rpcClient(m_web3Url);
 		FarmClient nodeRPC(rpcClient, OperationMode::Solo, m_userAcct);
 
 		int tokenBalance = nodeRPC.tokenBalance();
@@ -1227,5 +1232,6 @@ private:
 	bool m_shutdown = false;
 
 	string m_userAcct;
+	string m_web3Url;
 
 };
