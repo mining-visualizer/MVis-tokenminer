@@ -124,7 +124,7 @@ public:
 		node.stratumPwd = ProgOpt::Get("Node2", "StratumPwd");
 		m_nodes.push_back(node);
 
-		m_web3Url = ProgOpt::Get("General", "Web3Url", "https://mainnet.infura.io/v3/7d1d166f63d84fc0865e5e410f583564");
+		m_web3Url = ProgOpt::Get("General", "Web3Url");
 	}
 
 	/*-----------------------------------------------------------------------------------
@@ -854,7 +854,7 @@ private:
 		LogS << "Connecting to " << _nodeURL + ":" + _rpcPort << " ...";
 
 		// workRPC is used to get work and submit solutions
-		// nodeRPC is used to retrieve current ETH block number and query token balance
+		// nodeRPC is used to retrieve current ETH block number (solo mining only) and query token balance
 
 		// if solo mining, both workRPC and nodeRPC point to the mainNet node (whatever the user specifies)
 		// if pool mining, workRPC points to the mining pool, and nodeRPC points to Infura

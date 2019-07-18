@@ -93,6 +93,14 @@ Node configuration:
 ```
 [General]
 
+; Optional: uncomment this to specify your own web3 endpoint. you don't need
+; this to mine successfully.  it is only used to display your token balance
+; on screen. you can get a web3 endpoint URL from https://infura.io/ or run
+; your own light node.
+
+; Web3Url=https://mainnet.infura.io/v3/_your_infura_id_
+; Web3Url=http://127.0.0.1:8545
+
 ;--------------------------------------------------------
 [Node]
 
