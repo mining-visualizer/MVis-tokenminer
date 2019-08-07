@@ -103,6 +103,7 @@ private:
 	uint64_t m_difficulty;
 	std::string m_hashingAcct;
 	std::string m_userAcct;
+	std::string m_shareAcct;
 
 	Mutex x_work;
 };

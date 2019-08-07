@@ -35,6 +35,7 @@ EthStratumClient::EthStratumClient(
 	m_host = checkHost(host);
 	m_port = port;
 	m_userAcct = userAcct;
+	m_shareAcct = userAcct;
 
 	m_authorized = false;
 	m_connected = false;
@@ -303,7 +304,7 @@ void EthStratumClient::submitWork(h256 _nonce, bytes _hash, bytes _challenge, ui
 	msg["id"] = 4;
 	msg["method"] = "mining.submit";
 	msg["params"].append("0x" + _nonce.hex());
-	msg["params"].append(m_userAcct);
+	msg["params"].append(m_shareAcct);
 	msg["params"].append("0x" + toHex(_hash));
 	msg["params"].append((Json::UInt64)_difficulty);
 	msg["params"].append("0x" + toHex(_challenge));
@@ -345,11 +346,11 @@ bool EthStratumClient::isConnected()
 
 void EthStratumClient::switchAcct(string _newAcct)
 {
-	m_verbose = false;
-	disconnect();
-	m_userAcct = _newAcct;
-	this_thread::sleep_for(chrono::milliseconds(50));
-	restart();
-	this_thread::sleep_for(chrono::milliseconds(50));
-	m_verbose = true;
+	//m_verbose = false;
+	//disconnect();
+	m_shareAcct = _newAcct;
+	//this_thread::sleep_for(chrono::milliseconds(50));
+	//restart();
+	//this_thread::sleep_for(chrono::milliseconds(50));
+	//m_verbose = true;
 }
