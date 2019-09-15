@@ -67,7 +67,6 @@ private:
 	void readResponse(const boost::system::error_code& ec, std::size_t bytes_transferred);
 	void processReponse(Json::Value& responseObject);
 	void writeStratum(Json::Value _json);
-	void setWork(Json::Value params);
 	void work_timeout_handler(const boost::system::error_code& ec);
 	string streamBufToStr(boost::asio::streambuf &buff);
 	void logJson(Json::Value _json);
@@ -78,7 +77,7 @@ private:
 	string m_password;
 
 	bool m_authorized;	// we're subscribed to the pool
-	bool m_connected;	// this refers to a TCP connection
+	bool m_connected;		// this refers to a TCP connection
 	bool m_running;		// the Boost::Asio worker thread is running & listening
 
 	int	m_retries = 0;

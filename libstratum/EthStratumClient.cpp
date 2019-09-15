@@ -143,6 +143,7 @@ void EthStratumClient::disconnect()
 	if (m_verbose)
 		LogS << "Disconnecting from stratum server";
 	m_connected = false;
+
 	m_authorized = false;
 	m_running = false;
 	m_socket.close();
@@ -301,6 +302,11 @@ void EthStratumClient::submitWork(h256 _nonce, bytes _hash, bytes _challenge, ui
 
 	Json::Value msg;
 
+	if (!isConnected()) {
+		LogB << "Can't submit share: no stratum connection, or not subscribed";
+		return;
+	}
+
 	msg["id"] = 4;
 	msg["method"] = "mining.submit";
 	msg["params"].append("0x" + _nonce.hex());
@@ -339,7 +345,7 @@ bool EthStratumClient::isRunning()
 	return m_running; 
 }
 
-bool EthStratumClient::isConnected() 
+bool EthStratumClient::isConnected()
 { 
 	return m_connected && m_authorized; 
 }
