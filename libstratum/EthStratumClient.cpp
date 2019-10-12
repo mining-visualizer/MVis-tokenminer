@@ -132,6 +132,9 @@ void EthStratumClient::connectStratum()
 	msg["id"] = 1;
 	msg["method"] = "mining.subscribe";
 	msg["params"].append(m_userAcct);
+	std::string clientID = "MVis Tokenminer v";
+	clientID.append(dev::Version);
+	msg["params"].append(clientID);
 	writeStratum(msg);
 
 	readline();
