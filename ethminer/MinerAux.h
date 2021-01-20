@@ -45,6 +45,7 @@
 #include <libethcore/EthashGPUMiner.h>
 #include <libethcore/EthashCPUMiner.h>
 #include <libethcore/Farm.h>
+#include <ethminer/Misc.h>
 
 #include <libethash-cl/ethash_cl_miner.h>
 
@@ -426,22 +427,29 @@ public:
 		}
 
 		m_userAcct = ProgOpt::Get("0xBitcoin", "MinerAcct");
-		u256 mAcctNum;
+
+		// strip off possible worker string at the end
+		std::vector<std::string> acctElements = split(m_userAcct, '.');
+		string acctClean = acctElements[0];
+
+		if (acctClean.substr(0, 2) != "0x")
+		{
+			LogS << "Invalid 'MinerAcct' in tokenminer.ini - Miner account should start with '0x'";
+			exit(0);
+		}
+
+		u256 mAcctNum = 0;
 		try
 		{
-			mAcctNum = u256(m_userAcct);
+			mAcctNum = u256(acctClean);
 		}
 		catch (...)
 		{
 			LogS << "'MinerAcct' contains invalid characters in tokenminer.ini";
 			exit(0);
 		}
-		if (m_userAcct.substr(0, 2) != "0x")
-		{
-			LogS << "Invalid 'MinerAcct' in tokenminer.ini - Miner account should start with '0x'";
-			exit(0);
-		}
-		if (mAcctNum == 0 || m_userAcct.length() != 42)
+
+		if (mAcctNum == 0 || acctClean.length() != 42)
 		{
 			LogS << "Invalid 'MinerAcct' in tokenminer.ini";
 			exit(0);
@@ -460,7 +468,7 @@ public:
 				m_minutesPerShare = -1;
 			}
 		}
-		// this is intended to force a specific difficulty level. useful during development & testing, not recommended for the user.
+		 // this is intended to force a specific difficulty level. useful during development & testing, not recommended for the user.
 		string diff = ProgOpt::Get("0xBitcoin", "_Difficulty_", "-1");
 		m_difficulty = strToInt(diff, -1);
 

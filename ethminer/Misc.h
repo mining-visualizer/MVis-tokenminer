@@ -31,3 +31,7 @@ bool fileExists(std::string _path);
 void keccak256_0xBitcoin(dev::bytes& _challenge, dev::h160& _sender, dev::h256& _nonce, dev::bytes& _hash);
 uint64_t HexToInt(std::string _value);
 boost::filesystem::path getExecFolder(void);
+
+template <typename Out>
+void split(const std::string& s, char delim, Out result);
+std::vector<std::string> split(const std::string& s, char delim);
