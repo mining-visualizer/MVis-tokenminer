@@ -24,16 +24,14 @@ using boost::asio::ip::tcp;
 #define BOOST_ASIO_ENABLE_CANCELIO 
 
 EthStratumClient::EthStratumClient(
-	string const & host,
-	string const & port,
+	string const & url,
 	int const & retries,
 	int const & worktimeout,
 	string const & userAcct
 )
 	: m_socket(m_io_service)
 {
-	m_host = checkHost(host);
-	m_port = port;
+	m_url = url;
 	m_userAcct = userAcct;
 	m_shareAcct = userAcct;
 
@@ -52,20 +50,6 @@ EthStratumClient::EthStratumClient(
 EthStratumClient::~EthStratumClient()
 {
 	m_io_service.stop();
-}
-
-string EthStratumClient::checkHost(string _host)
-{
-	// boost asio doesn't like the http:// prefix (stratum mining)
-	// json rpc (FarmClient) is ok with it though.
-
-	size_t p;
-	if ((p = _host.find("://")) != string::npos)
-	{
-		_host = _host.substr(p + 3, string::npos);
-	}
-
-	return _host;
 }
 
 /*-----------------------------------------------------------------------------------
@@ -107,9 +91,34 @@ void EthStratumClient::restart()
 void EthStratumClient::connectStratum()
 {
 	if (m_verbose)
-		LogB << "Connecting to stratum server " << m_host + ":" + m_port << " ...";
+		LogB << "Connecting to stratum server " << m_url << " ...";
 	tcp::resolver resolver(m_io_service);
-	tcp::resolver::query query(m_host, m_port);
+
+	size_t p;
+	string s = m_url;
+
+	// boost asio doesn't like the http:// prefix (stratum mining). json rpc (FarmClient) is ok with it though.
+	if ((p = s.find("://")) != string::npos) {
+		s = s.substr(p + 3, string::npos);
+	}
+
+	// parse the port #
+	string port = "";
+	string host;
+
+	p = s.find_last_of(":");
+	if (p != string::npos) {
+		host = s.substr(0, p);
+		if (p + 1 <= s.length())
+			port = s.substr(p + 1);
+	}
+
+	if (port == "") {
+		LogB << "Error: Missing port number on stratum url.";
+		return;
+	}
+
+	tcp::resolver::query query(host, port);
 
 	boost::system::error_code ec;
 	try
@@ -122,7 +131,7 @@ void EthStratumClient::connectStratum()
 	}
 	if (ec)
 	{
-		reconnect("Could not connect to stratum server " + m_host + ":" + m_port + " : " + ec.message());
+		reconnect("Could not connect to stratum server " + m_url + " : " + ec.message());
 		return;
 	}
 	m_connected = true;

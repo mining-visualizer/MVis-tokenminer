@@ -86,9 +86,7 @@ public:
 	typedef struct
 	{
 		string url;
-		string rpcPort;
-		string stratumPort;
-		string stratumPwd;
+		bool isStratum;
 	} node_t;
 
 
@@ -110,43 +108,24 @@ public:
 
 		m_nodes.clear();
 
+		string stratum;
 		node_t node;
+
 		// main node
 		node.url = ProgOpt::Get("Node", "Host");
-		node.rpcPort = ProgOpt::Get("Node", "RPCPort");
-		node.stratumPort = ProgOpt::Get("Node", "StratumPort");
-		node.stratumPwd = ProgOpt::Get("Node", "StratumPwd");
+		stratum = ProgOpt::Get("Node", "Stratum", "false");
+		LowerCase(stratum);
+		node.isStratum = stratum == "true" || stratum == "yes" || stratum == "1";
 		m_nodes.push_back(node);
 
 		// failover node
 		node.url = ProgOpt::Get("Node2", "Host");
-		node.rpcPort = ProgOpt::Get("Node2", "RPCPort");
-		node.stratumPort = ProgOpt::Get("Node2", "StratumPort");
-		node.stratumPwd = ProgOpt::Get("Node2", "StratumPwd");
+		stratum = ProgOpt::Get("Node2", "Stratum", "false");
+		LowerCase(stratum);
+		node.isStratum = stratum == "true" || stratum == "yes" || stratum == "1";
 		m_nodes.push_back(node);
 
 		m_web3Url = ProgOpt::Get("General", "Web3Url");
-	}
-
-	/*-----------------------------------------------------------------------------------
-	* parseNode
-	*----------------------------------------------------------------------------------*/
-	bool parseNode(char* _arg, char* _argN, string &_url, string &_port)
-	{
-		string s = string(_argN);
-		LowerCase(s);
-
-		size_t p = s.find_last_of(":");
-		if (p > 0)
-		{
-			_url = s.substr(0, p);
-			if (p + 1 <= s.length())
-				_port = s.substr(p + 1);
-		}
-		else
-			_url = s;
-
-		return true;
 	}
 
 	/*-----------------------------------------------------------------------------------
@@ -165,13 +144,11 @@ public:
 		string arg = argv[i];
 		if ((arg == "-N" || arg == "--node") && i + 1 < argc)
 		{
-			if (!parseNode(argv[i], argv[++i], m_nodes[0].url, m_nodes[0].rpcPort))
-				exit(-1);
+			m_nodes[0].url = string(argv[++i]);
 		}
 		else if ((arg == "-N2" || arg == "--node2") && i + 1 < argc)
 		{
-			if (!parseNode(argv[i], argv[++i], m_nodes[1].url, m_nodes[1].rpcPort))
-				exit(-1);
+			m_nodes[1].url = string(argv[++i]);
 		}
 		else if ((arg == "-I" || arg == "--polling-interval") && i + 1 < argc)
 			try {
@@ -428,8 +405,8 @@ public:
 
 		m_userAcct = ProgOpt::Get("0xBitcoin", "MinerAcct");
 
-		// strip off possible worker string at the end
-		std::vector<std::string> acctElements = split(m_userAcct, '.');
+		// strip off possible worker string at the end 
+		std::vector<std::string> acctElements = split(m_userAcct, ',');
 		string acctClean = acctElements[0];
 
 		if (acctClean.substr(0, 2) != "0x")
@@ -548,10 +525,10 @@ public:
 			{
 				if (m_nodes[i].url != "")
 				{
-					if (m_nodes[i].stratumPort != "")
-						doStratum(f, m_nodes[i].url, m_nodes[i].rpcPort, m_nodes[i].stratumPort);
+					if (m_nodes[i].isStratum)
+						doStratum(f, m_nodes[i].url);
 					else
-						doFarm(f, m_nodes[i].url, m_nodes[i].rpcPort);
+						doGetWork(f, m_nodes[i].url);
 				}
 				if (f.shutDown)
 					break;
@@ -833,9 +810,10 @@ private:
 	}
 
 	/*-----------------------------------------------------------------------------------
-	* doFarm
+	* doGetWork.  this is for solo mining, and pool mining using the legacy RPC getwork 
+	* 	  protocol.
 	*----------------------------------------------------------------------------------*/
-	void doFarm(GenericFarm<EthashProofOfWork>& f, string _nodeURL, string _rpcPort)
+	void doGetWork(GenericFarm<EthashProofOfWork>& f, string _nodeURL)
 	{
 		Timer lastHashRateDisplay;
 		Timer lastBlockTime;
@@ -859,7 +837,7 @@ private:
 		bool connectedToNode = false;
 		bool gasPriceBidding = ProgOpt::Get("0xBitcoin", "GasPriceBidding", "0") == "1" && m_opMode == OperationMode::Solo;
 
-		LogS << "Connecting to " << _nodeURL + ":" + _rpcPort << " ...";
+		LogS << "Connecting to " << _nodeURL << " ...";
 
 		// workRPC is used to get work and submit solutions
 		// nodeRPC is used to retrieve current ETH block number (solo mining only) and query token balance
@@ -867,11 +845,11 @@ private:
 		// if solo mining, both workRPC and nodeRPC point to the mainNet node (whatever the user specifies)
 		// if pool mining, workRPC points to the mining pool, and nodeRPC points to Infura
 
-		jsonrpc::HttpClient client(_nodeURL + ":" + _rpcPort);
+		jsonrpc::HttpClient client(_nodeURL);
 		FarmClient workRPC(client, m_opMode, m_userAcct);
 
 		jsonrpc::HttpClient* nodeClient;
-		FarmClient* nodeRPC = &workRPC;
+		FarmClient* nodeRPC = &workRPC;		// for solo mining, we use the node given to us for everything.
 		if (m_opMode == OperationMode::Pool)
 		{
 			nodeClient = new jsonrpc::HttpClient(m_web3Url);
@@ -883,7 +861,7 @@ private:
 		h256 target;
 		bytes challenge;
 		deque<bytes> recentChallenges;
-		uint64_t difficulty = 0;
+		uint64_t difficulty = 4;
 
 		int tokenBalance = nodeRPC->tokenBalance();
 
@@ -1058,23 +1036,23 @@ private:
 						break;
 				}
 				this_thread::sleep_for(chrono::seconds(5));
-				LogS << "Connecting to " << _nodeURL + ":" + _rpcPort << " ...";
+				LogS << "Connecting to " << _nodeURL << " ...";
 			}
 			catch (const std::exception& e)
 			{
-				LogB << "Exception: MinerAux::doFarm - " << e.what();
+				LogB << "Exception: MinerAux::doGetWork - " << e.what();
 			}
 		}
 
 		nodeRPC->closeTxFilter();
 
-	}	// doFarm
+	}	// doGetWork
 
 
 	/*-----------------------------------------------------------------------------------
-	* doStratum
+	* doStratum. this is for pool mining only.
 	*----------------------------------------------------------------------------------*/
-	void doStratum(GenericFarm<EthashProofOfWork>& f, string _nodeURL, string _rpcPort, string _stratumPort)
+	void doStratum(GenericFarm<EthashProofOfWork>& f, string _nodeURL)
 	{
 
 		Timer lastHashRateDisplay;
@@ -1101,10 +1079,10 @@ private:
 
 		// retry of zero means retry forever, since there is no failover.
 		int maxRetries = failOverAvailable() ? m_maxFarmRetries : 0;
-		EthStratumClient* client = new EthStratumClient(_nodeURL, _stratumPort, maxRetries, m_worktimeout, m_userAcct);
+		EthStratumClient* client = new EthStratumClient(_nodeURL, maxRetries, m_worktimeout, m_userAcct);
 
 		jsonrpc::HttpClient rpcClient(m_web3Url);
-		FarmClient nodeRPC(rpcClient, OperationMode::Solo, m_userAcct);
+		FarmClient nodeRPC(rpcClient, OperationMode::Pool, m_userAcct);
 
 		int tokenBalance = nodeRPC.tokenBalance();
 

@@ -436,6 +436,7 @@ public:
 	}
 
 	uint64_t tokenBalance() {
+		static bool errorReported = false;
 		Json::Value p;
 		p["from"] = m_userAcct;
 		p["to"] = m_tokenContract;
@@ -459,11 +460,15 @@ public:
 		{
 			Json::Value result = CallMethod("eth_call", data);
 			u256 balance = u256(result.asString()) / 100000000;
+			errorReported = false;
 			return static_cast<uint64_t>(balance);
 		}
 		catch (std::exception& e)
 		{
-			LogD << "Error in routine tokenBalance: " << e.what();
+			if (!errorReported) {
+				LogD << "Error in routine tokenBalance: " << e.what();
+			}
+			errorReported = true;
 			return 0;
 		}
 	}

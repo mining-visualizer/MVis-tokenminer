@@ -42,8 +42,7 @@ public:
 	using WorkPackageFn = std::function<void(unsigned int)>;
 
 	EthStratumClient(
-		string const & host, 
-		string const & port,
+		string const & url, 
 		int const & retries,
 		int const & worktimeout,
 		string const & userAcct
@@ -61,7 +60,6 @@ public:
 private:
 	void connectStratum();
 	void launchIOS();
-	string checkHost(string _host);
 	void reconnect(string msg);
 	void readline();
 	void readResponse(const boost::system::error_code& ec, std::size_t bytes_transferred);
@@ -72,9 +70,7 @@ private:
 	void logJson(Json::Value _json);
 	bool validInput(Json::Value _json);
 
-	string m_host;
-	string m_port;
-	string m_password;
+	string m_url;
 
 	bool m_authorized;	// we're subscribed to the pool
 	bool m_connected;		// this refers to a TCP connection

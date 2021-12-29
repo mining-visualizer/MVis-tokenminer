@@ -8,7 +8,7 @@ This is a fork of my MVis-ethminer program, which was a fork of Genoil's ethmine
 * This miner should work with any GPU that supports OpenCL, ie. pretty much all AMDs and most NVidia.
 * Windows binaries can be downloaded from the  [Releases](https://github.com/mining-visualizer/MVis-tokenminer/releases) page, or you can build from source (see below).
 * For Linux, the only option at present is to build from source.  See the instructions below.  
-* This miner supports both pool mining and solo mining. If you want to mine solo, you either need to run your own node, or use a public one like the ones Infura provides.
+* This miner supports both pool mining and solo mining. If you want to mine solo, you either need to run your own node, or use a public one (ie. Infura).
 * When in pool mining mode, a 1.0% dev fee is in effect. Every 4 hours it switches to 'dev fee mining' for a short period of time, based on the percent.
 
 
@@ -17,29 +17,36 @@ This is a fork of my MVis-ethminer program, which was a fork of Genoil's ethmine
 **YouTube Tutorial** : https://www.youtube.com/watch?v=W-gLERwzKno
 
 * Unzip the [download package](https://github.com/mining-visualizer/MVis-tokenminer/releases) anywhere you like.  
-* Open up `tokenminer.ini` using any text editor and set the following configuration items:
-* For **Pool Mining**, you need to specify your mining pool and your ETH address. 
+* Double-click on the file `list-devices.bat`.  Examine the screen output and verify your GPU's are recognized.  Pay special attention to the PlatformID.  If it is anything other than 0, you will need to edit the `start-mining.bat` file and change the `--opencl-platform <n>` argument.
+* Open up `tokenminer.ini` using any text editor and set the following configuration items, depending on whether you are solo mining or mining on a pool:
+
+##### Pool Mining
+
+* For Pool Mining, you need to specify your mining pool URL and your ETH address. 
 
 ```
 [Node]
-Host=http://your_mining_pool.com   
-RPCPort=8080
+Host=http://your_mining_pool.com:8080
 
 [0xBitcoin]
 MinerAcct=0x1234512345123451234512345123451234512345
 ```
 * All other settings in the `[0xBitcoin]` section can be left as is.
 * You can also specify the pool mining address on the command line (-N).  See below for all command line options.
-* If your mining pool supports the **stratum protocol**, change the `RPCPort=8080` line to `StratumPort=8090`.  Consult with your mining pool for the actual port # to use.
-* For **Solo Mining**:
-    * Input an ETH account and associated private key. 
-    * You can specify the address and port of your node in the `.ini` file, or on the command line.
-    * You can enable gas price bidding.  (see comments in the file).  Note that enabling this feature does not guarantee that you will win every bid.  Network latency will sometimes result in failed transactions, even if you 'out-bid' the other transaction.
+* If your mining pool supports the **stratum protocol**, set `Stratum=true` in the Node section, and change the port number to whatever the pool uses.
+* Start mining by double-clicking on `start-mining.bat`.
+
+##### Solo Mining
+
+* Specify an ETH account and associated private key in the INI file.
+* You need to have access to an Ethereum node: either one you are running locally, or a publicly available node (ie. Infura). You can specify the address and port of your node in the `.ini` file, or on the command line.
+* Start mining with `tokenminer.exe -S -G`.  This assumes you've specified the node address in the .INI file.
+
+
+##### General
+
 * You can leave the .INI file in the executable folder,  or you can move it to `C:\Users\[USER]\AppData\Local\tokenminer` on Windows, or `$HOME/.config/tokenminer` on Linux.  If that folder path does not exist, you will need to create it manually. If for some reason that file exists at both locations, the one in the executable folder will take precedence. 
 * **WINDOWS ONLY**: download and install both the [VC 2013 Redistributable](https://www.microsoft.com/en-ca/download/details.aspx?id=40784) and the [VC 2015 Redistributable](https://www.microsoft.com/en-ca/download/details.aspx?id=48145)
-* Double-click on the file `list-devices.bat`.  Examine the screen output and verify your GPU's are recognized.  Pay special attention to the PlatformID.  If it is anything other than 0, you will need to edit the `start-mining.bat` file and change the `--opencl-platform <n>` argument.
-* Start POOL MINING by double-clicking on `start-mining.bat`.
-* Start SOLO MINING with `tokenminer.exe -S -G`.  This assumes you've specified the node address in the .INI file.
 * **COOLING**: Please note that MVis-tokenminer does not have any features to set fan speeds or regulate cooling, other than shutting down if things get too hot.  Usually the AMD drivers do a pretty good job in that regard, but sometimes they don't.  It is your responsibility to monitor your fan speeds and GPU temperatures. If the AMD drivers aren't setting fan speeds high enough, you may need to use a 3rd party product,  like Speedfan or Afterburner.
 
 #### Configuration Details ####
@@ -91,12 +98,13 @@ Node configuration:
 #### INI File Settings
 
 ```
+
 [General]
 
-; Optional: uncomment this to specify your own web3 endpoint. you don't need
-; this to mine successfully.  it is only used to display your token balance
-; on screen. you can get a web3 endpoint URL from https://infura.io/ or run
-; your own light node.
+; Optional: uncomment this to specify your own web3 endpoint. you don't need this
+; to mine successfully.  it is only used for pool mining, to display your token
+; balance on screen. there are a variety of publicly available web3 services. 
+; see https://ethereumnodes.com/
 
 ; Web3Url=https://mainnet.infura.io/v3/_your_infura_id_
 ; Web3Url=http://127.0.0.1:8545
@@ -104,59 +112,55 @@ Node configuration:
 ;--------------------------------------------------------
 [Node]
 
-; If you are pool mining, set the Host and Port to that of your mining pool.
-; If you are solo mining, set the Host and Port to that of your node. You can 
-; also set these with the -N command line paramater.  The command line overrides
-; settings specified here
+; If you are pool mining, set Host to the URL of your mining pool.
+; If you are solo mining, set the Host to point to your node. Public nodes 
+; can also be used (ie. Infura). You can also set these with the -N 
+; command line paramater.  The command line overrides settings specified here
 ;
 ; Examples, POOL MINING:
-;    Host=http://your_mining_pool.com   
-;    RPCPort=8080
-;      or
-;    StratumPort=8090
+;    Host=http://mvis.ca:8080
 ;
 ; Examples, SOLO MINING:
-;    Host=127.0.0.1
+;    Host=127.0.0.1:8545
 ;    Host=https://mainnet.infura.io/your_api_key
-;    RPCPort=8545
 
 Host=
-RPCPort=
+
+; Pool Mining: Set this to true if the mining pool supports stratum protocol. 
+; Currently only mvis.ca does, on port 8090.
+Stratum=false
 
 ;--------------------------------------------------------
 [Node2]
 
 ; Secondary (failover) node/mining pool, if you have one. Default is disabled.
-;Host=http://your_failover_mining_pool.com   
-;RPCPort=8080
+
+; Host=http://your_failover_mining_pool.com
+
+Stratum=false
 
 ;--------------------------------------------------------
 [0xBitcoin]
 
 ; POOL MINING: Your ETH account, to which payouts will be made. THE PRIVATE
 ;   KEY IS NOT REQUIRED.  Note the acct should start with 0x.
+;
 ; SOLO MINING: Your ETH account and private key.  Note the PK does NOT start
 ;   with 0x.  Mining rewards will be deposited to this account.  Transaction
 ;   fees will be DRAWN from this account.  Make sure you have enough funds!!
-;   If you have multiple mining rigs, make sure each rig is running under a 
+;   If you have multiple mining rigs, make sure each rig is running under a
 ;   separate ETH account, to prevent nonce collisions if they happen to submit
-;   txs at nearly the same time. 
+;   txs at nearly the same time.
 
 MinerAcct=0x........................................
 AcctPK=................................................................
-
-; Difficulty assignment.  Defaults to Pool assigned.  You can also 
-; specify a value in minutes to have the miner self-assign a difficulty
-; level to target an average number of minutes per share.
-; Currently, no mining pools support self-assigned difficulty.
-MinutesPerShare=Pool
 
 ; 0xBitcoin contract address. normally you will not change this.
 TokenContract=0xb6ed7644c69416d67b522e20bc294a9a9b405b31
 
 ; THE REMAINING SETTINGS IN THIS SECTION APPLY ONLY TO SOLO MINING:
 
-; when your miner finds a solution, transactions will be submitted with this 
+; when your miner finds a solution, transactions will be submitted with this
 ; amount of gas (gwei).  You can change this setting 'on the fly' (without having
 ; to restart the miner).  All other setting changes require the miner to be restarted.
 GasPrice=5
@@ -196,6 +200,7 @@ ThrottleTemp=80
 ; Number of seconds after which the entire mining rig will shutdown if one or more GPUs
 ; remain at or above ThrottleTemp.
 ShutDown=20
+
 
 ```
 
