@@ -61,6 +61,7 @@ public:
 			string s = ProgOpt::Get("0xBitcoin", "BidTop", "2");
 			if (isDigits(s))
 				m_bidTop = atoi(s.c_str());
+			m_chainId = getChainId();
 		}
 	}
 
@@ -238,7 +239,7 @@ public:
 
 		// prepare transaction
 		Transaction t;
-		t.chainId = getChainId();
+		t.chainId = m_chainId;
 		if (m_lastSolution.elapsedSeconds() > 5 * 60 || m_txNonce == -1)
 			m_txNonce = getNextNonce();
 		else
@@ -688,6 +689,7 @@ private:
 	string m_hashingAcct = "";
 	uint64_t m_difficulty;
 	h256 m_target;
+	int m_chainId;
 
 };
 
