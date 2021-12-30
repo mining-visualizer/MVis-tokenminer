@@ -15,7 +15,10 @@ using Public = h512;
 
 /// A signature: 65 bytes: r: [0, 32), s: [32, 64), v: 64.
 /// @NOTE This is not endian-specific; it's just a bunch of bytes.
-using Signature = h520;
+/// 
+using SigHash = FixedHash<68>;
+
+using Signature = SigHash;
 
 /// Named-boolean type to encode whether a signature be included in the serialisation process.
 enum IncludeSignature
@@ -27,9 +30,9 @@ enum IncludeSignature
 struct SignatureStruct
 {
 	SignatureStruct() = default;
-	SignatureStruct(Signature const& _s) { *(h520*)this = _s; }
+	SignatureStruct(Signature const& _s) { *(SigHash*)this = _s; }
 	SignatureStruct(h256 const& _r, h256 const& _s, byte _v) : r(_r), s(_s), v(_v) {}
-	operator Signature() const { return *(h520 const*)this; }
+	operator Signature() const { return *(SigHash const*)this; }
 
 	/// @returns true if r,s,v values are valid, otherwise false
 	bool isValid() const noexcept {
@@ -44,7 +47,7 @@ struct SignatureStruct
 
 	h256 r;
 	h256 s;
-	byte v = 0;
+	unsigned v = 0;
 };
 
 class Secp256k1Context
@@ -89,12 +92,15 @@ public:
 	Transaction() {}
 
 	void streamRLP(RLPStream& _s, IncludeSignature _sig) {
-		_s.appendList((_sig ? 3 : 0) + 6);
+		_s.appendList(9);
 		_s << nonce << gasPrice << gas;
 		_s << receiveAddress;
 		_s << value << data;
-		if (_sig)
-			_s << (m_vrs.v + 27) << (u256) m_vrs.r << (u256) m_vrs.s;
+		if (_sig) {
+			_s << m_vrs.v << (u256) m_vrs.r << (u256) m_vrs.s;
+		} else {
+			_s << chainId << (u256) 0 << (u256) 0;
+		}
 	}
 
 	/// @returns the RLP serialisation of this transaction.
@@ -106,23 +112,22 @@ public:
 
 	/// @returns the SHA3 hash of the RLP serialisation of this transaction.
 	h256 sha3(IncludeSignature _sig = WithSignature) {
-		if (_sig == WithSignature && m_hashWith)
-			return m_hashWith;
 		RLPStream s;
 		streamRLP(s, _sig);
 		auto ret = dev::sha3(s.out());
-		if (_sig == WithSignature)
-			m_hashWith = ret;
 		return ret;
 	}
 
 	void sign(Secret const& _priv) {
 		auto sig = signBytes(_priv, sha3(WithoutSignature));
 		SignatureStruct sigStruct = *(SignatureStruct const*) &sig;
-		if (sigStruct.isValid())
+		if (sigStruct.isValid()) {
 			m_vrs = sigStruct;
+			m_vrs.v += chainId * 2 + 35;
+		}
 	}
 
+	unsigned chainId;
 	u256 nonce;						///< The transaction-count of the sender.
 	u256 value;						///< The amount of ETH to be transferred by this transaction. Called 'endowment' for contract-creation transactions.
 	Address receiveAddress;			///< The receiving address of the transaction.
@@ -133,7 +138,6 @@ public:
 	string txHash;					///< hash of tx
 	bytes challenge;				///< challenge this tx was submitted under.
 
-	h256 m_hashWith;				///< Cached hash of transaction with signature.
 	SignatureStruct m_vrs;			///< The signature of the transaction. Encodes the sender.
 
 };

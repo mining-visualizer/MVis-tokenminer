@@ -238,6 +238,7 @@ public:
 
 		// prepare transaction
 		Transaction t;
+		t.chainId = getChainId();
 		if (m_lastSolution.elapsedSeconds() > 5 * 60 || m_txNonce == -1)
 			m_txNonce = getNextNonce();
 		else
@@ -432,6 +433,12 @@ public:
 		p.append(m_userAcct);
 		p.append("latest");
 		Json::Value result = CallMethod("eth_getTransactionCount", p);
+		return HexToInt(result.asString());
+	}
+
+	int getChainId() {
+		Json::Value p;
+		Json::Value result = CallMethod("eth_chainId", p);
 		return HexToInt(result.asString());
 	}
 
