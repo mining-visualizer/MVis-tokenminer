@@ -34,15 +34,6 @@ public:
 		NotFound
 	};
 
-	class CMiner {
-	public:
-		string txHash;
-		string account;
-		int gasPrice;
-		bytes challenge;
-
-	};
-
 	// Constructor
 	FarmClient(
 		jsonrpc::IClientConnector &conn,
@@ -57,10 +48,6 @@ public:
 		if (_opMode == OperationMode::Solo)
 		{
 			m_userAcctPK = ProgOpt::Get("0xBitcoin", "AcctPK");
-			m_bidTop = 2;
-			string s = ProgOpt::Get("0xBitcoin", "BidTop", "2");
-			if (isDigits(s))
-				m_bidTop = atoi(s.c_str());
 			m_chainId = getChainId();
 		}
 	}
@@ -103,35 +90,6 @@ public:
 			LogB << "Error in getWorkPool: JSON-RPC call [difficulty] - " << response.getErrorMessage(difficultyID);
 		}
 		m_difficulty = atoll(response.getResult(difficultyID).asString().c_str());
-
-		_target = m_target;
-		_difficulty = m_difficulty;
-		_hashingAcct = m_hashingAcct;
-		LogF << "Trace: getWorkPool - challenge:" << toHex(_challenge).substr(0, 8)
-			<< ", target:" << std::hex << std::setw(16) << std::setfill('0') << upper64OfHash(_target)
-			<< ", difficulty:" << std::dec << _difficulty;
-	}
-
-	void getWorkPool_old(bytes& _challenge, h256& _target, uint64_t& _difficulty, string& _hashingAcct)
-	{
-		static Timer s_lastFetch;
-		Json::Value data;
-		Json::Value result;
-		result = CallMethod("getChallengeNumber", data);
-		_challenge = fromHex(result.asString());
-		data.append(m_userAcct);
-		result = CallMethod("getMinimumShareTarget", data);
-		m_target = u256(result.asString());
-
-		if (s_lastFetch.elapsedSeconds() > 20 || m_hashingAcct == "")
-		{
-			// no reason to retrieve this stuff every time.
-			result = CallMethod("getPoolEthAddress", Json::Value());
-			m_hashingAcct = result.asString();
-			result = CallMethod("getMinimumShareDifficulty", data);
-			m_difficulty = atoll(result.asString().c_str());
-			s_lastFetch.restart();
-		}
 
 		_target = m_target;
 		_difficulty = m_difficulty;
@@ -282,158 +240,6 @@ public:
 		m_pendingTxs.push_back(t);
 	}
 
-	void setChallenge(bytes& _challenge)
-	{
-		m_recentChallenges.push_front(_challenge);
-		if (m_recentChallenges.size() > 4)
-			m_recentChallenges.pop_back();
-	}
-
-	// this routine runs on a separate thread
-	void txpoolScanner()
-	{
-		Json::Value data;
-		Json::Value result;
-		int sleepTime = 10000;
-
-		if (tx_filterID == "")
-		{
-			// sign up for pending transactions
-			try
-			{
-				data.clear();
-				result = CallMethod("eth_newPendingTransactionFilter", data);
-				tx_filterID = result.asString();
-				if (tx_filterID == "")
-					LogS << "Unable to initialize txpool filtering.  Your node may not support it. Try disabling GasPriceBidding.";
-				else
-					sleepTime = 1000;
-			}
-			catch (std::exception& e)
-			{
-				LogB << "Error calling eth_newPendingTransactionFilter" << e.what();
-				LogB << "Your node may not support txpool filtering. Try disabling GasPriceBidding.";
-				tx_filterID = "";
-			}
-		}
-
-		// check existing bidders to see if any need removal.
-		for (int i = m_biddingMiners.size() - 1; i >= 0; i--)
-		{
-			CMiner miner = m_biddingMiners[i];
-			try
-			{
-				// check to see if the tx they submitted is still there
-				Json::Value tx;
-				data.clear();
-				data.append(miner.txHash);
-				tx = CallMethod("eth_getTransactionByHash", data);
-				if (tx.isNull())
-				{
-					LogD << "Miner " << miner.account.substr(0, 10) << " is no longer in the txpool. tx = " << miner.txHash.substr(0, 10);
-					m_biddingMiners.erase(m_biddingMiners.begin() + i);
-				} else
-				{
-					// check for the existence of a tx receipt, which indicates the tx got mined.
-					data.clear();
-					data.append(miner.txHash);
-					try
-					{
-						tx = CallMethod("eth_getTransactionReceipt", data);
-						if (!tx.isNull())
-						{
-							string bidStatus = tx["status"].asString() == "0x1" ? " won" : (tx["status"].asString() == "0x0" ? " lost" : " ???");
-							LogD << "Miner " << miner.account.substr(0, 10) << bidStatus << ", block: "
-								<< HexToInt(tx["blockNumber"].asString()) << ", tx=" << miner.txHash.substr(0, 10);
-							m_biddingMiners.erase(m_biddingMiners.begin() + i);
-						}
-					}
-					catch (...)
-					{
-						// most likely transaction receipt not found
-					}
-				}
-			}
-			catch (std::exception& e)
-			{
-				LogB << "Error calling eth_getTransactionByHash" << e.what();
-				result.clear();
-			}
-		}
-
-
-		// request the hashes of all txs received since the last time we called.
-		try
-		{
-			if (tx_filterID == "")
-				result.clear();
-			else
-			{
-				data = Json::Value();
-				data.append(tx_filterID);
-				result = CallMethod("eth_getFilterChanges", data);
-			}
-		}
-		catch (std::exception& e)
-		{
-			LogB << "Error calling eth_getFilterChanges" << e.what();
-			result.clear();
-		}
-
-		// we've only got the hashes at this point,  so now retrieve each tx
-		for (uint32_t i = 0; i < result.size(); i++)
-		{
-			string hash = result[i].asString();
-			data.clear();
-			data.append(hash);
-			try {
-				Json::Value tx = CallMethod("eth_getTransactionByHash", data);
-				if (!tx.isNull()) {
-					string toAddr = tx["to"].asString();
-					string input = tx["input"].asString();
-					// look for txs addressed to the 0xBitcoin contract that are calling the mint() function
-					if (LowerCase(toAddr) == m_tokenContract && input.substr(0, 10) == "0x1801fbe5") {
-						CMiner miner;
-						miner.txHash = hash;
-						miner.account = tx["from"].asString();
-						miner.gasPrice = HexToInt(tx["gasPrice"].asString()) / 1000000000;
-						// try to determine what challenge this miner is submitting for.
-						// pull out the nonce and the hash
-						h256 nonce = h256(input.substr(10, 64));
-						bytes minerhash = fromHex(input.substr(74, 64));
-						h160 sender = h160(miner.account);
-						bytes hash(32);
-						{
-							for (auto c : m_recentChallenges)
-							{
-								keccak256_0xBitcoin(c, sender, nonce, hash);
-								if (hash == minerhash)
-								{
-									miner.challenge = c;
-								}
-							}
-						}
-						LogD << "Miner " << miner.account.substr(0, 10) << " submitted tx " << miner.txHash.substr(0, 10)
-							<< ". gasPrice=" << miner.gasPrice << ", challenge=" << toHex(miner.challenge).substr(0, 8);
-						m_biddingMiners.push_back(miner);
-					}
-				}
-			}
-			catch (std::exception& e) {
-				LogB << "Error calling eth_getTransactionByHash " << e.what();
-			}
-		}
-
-	}
-
-	void closeTxFilter() {
-		if (tx_filterID == "") return;
-		// cancel the filter
-		Json::Value data;
-		data.append(tx_filterID);
-		CallMethod("eth_uninstallFilter", data);
-	}
-
 	int getNextNonce() {
 		// get transaction count for nonce
 		Json::Value p;
@@ -517,16 +323,6 @@ public:
 	u256 RecommendedGasPrice(bytes _challenge)
 	{
 		u256 recommendation = 0;
-		for (auto m : m_biddingMiners)
-		{
-			if (m.challenge == _challenge && stricmp(m.account.c_str(), m_userAcct.c_str()) != 0)
-			{
-				LogF << "Trace: RecommendedGasPrice, existing bidder " << m.account.substr(0,10) << ", gasPrice=" << m.gasPrice;
-				if (m.gasPrice > recommendation)
-					recommendation = m.gasPrice;
-			}
-		}
-
 		// can't get the max macro to work ... stupid conflicts!
 		if (recommendation == 0)
 			recommendation = m_startGas;
@@ -603,59 +399,6 @@ public:
 	}
 
 
-
-	void testHash(bytes _challenge, string _sender, h256 _nonce)  throw (jsonrpc::JsonRpcException) {
-		std::vector<byte> mix(84);
-		std::ostringstream ss;
-		Json::Value p;
-		p["from"] = _sender;
-		p["to"] = m_tokenContract;        // 0xbitcoin contract address
-
-		// function signature
-		h256 bMethod = sha3("getMintDigest(uint256,bytes32,bytes32)");
-		std::string sMethod = toHex(bMethod, dev::HexPrefix::Add);
-		sMethod = sMethod.substr(0, 10);
-
-		// nonce
-		ss << std::setw(64) << std::setfill('0') << _nonce.hex();
-		std::string s2(ss.str());
-		sMethod = sMethod + s2;
-		memcpy(&mix[52], _nonce.data(), 32);
-
-		// challenge_digest. this is actually an unused parameter in the contract, so we
-		// just send in the challenge_number twice.
-		ss = std::ostringstream();
-		ss << std::left << std::setw(64) << std::setfill('0') << toHex(_challenge);
-		s2 = std::string(ss.str());
-		sMethod = sMethod + s2;
-
-		// challenge_number
-		sMethod = sMethod + s2;
-
-		p["data"] = sMethod;
-
-		Json::Value data;
-		data.append(p);
-		data.append("latest");
-
-		Json::Value result = this->CallMethod("eth_call", data);
-		if (result.isString()) {
-			LogS << "test hash";
-			LogS << result.asString();
-			h160 sender(_sender);
-			memcpy(&mix[0], _challenge.data(), 32);
-			memcpy(&mix[32], sender.data(), 20);
-			bytes hash(32);
-			keccak256_0xBitcoin(_challenge, sender, _nonce, hash);
-			LogS << "0x" << toHex(hash);
-			SHA3_256((const ethash_h256_t*) hash.data(), (const uint8_t*) mix.data(), 84);
-			LogS << "0x" << toHex(hash);
-			LogS << "end test";
-
-		} else
-			throw jsonrpc::JsonRpcException(jsonrpc::Errors::ERROR_CLIENT_INVALID_RESPONSE, result.toStyledString());
-	}
-
 	/*-----------------------------------------------------------------------------------
 	* getBlockNumber
 	*----------------------------------------------------------------------------------*/
@@ -685,9 +428,6 @@ private:
 	int m_txNonce = -1;
 	Timer m_lastSolution;
 	vector<Transaction> m_pendingTxs;
-	string tx_filterID;
-	deque<bytes> m_recentChallenges;
-	deque<CMiner> m_biddingMiners;
 	int m_startGas;
 	int m_maxGas;
 	int m_bidTop;

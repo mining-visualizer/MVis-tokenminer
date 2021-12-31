@@ -835,7 +835,6 @@ private:
 		unsigned farmRetries = 0;
 		int maxRetries = failOverAvailable() ? m_maxFarmRetries : c_StopWorkAt;
 		bool connectedToNode = false;
-		bool gasPriceBidding = ProgOpt::Get("0xBitcoin", "GasPriceBidding", "0") == "1" && m_opMode == OperationMode::Solo;
 
 		LogS << "Connecting to " << _nodeURL << " ...";
 
@@ -955,7 +954,6 @@ private:
 								target = _target;
 								LogB << "New challenge : " << toHex(_challenge).substr(0, 8);
 								f.setWork(challenge, target);
-								workRPC.setChallenge(challenge);
 							}
 						}
 						if (_target != target)
@@ -968,8 +966,6 @@ private:
 					if (lastCheckTx.elapsedMilliseconds() > 1000 && m_opMode == OperationMode::Solo)
 					{
 						nodeRPC->checkPendingTransactions();
-						if (gasPriceBidding)
-							nodeRPC->txpoolScanner();
 						lastCheckTx.restart();
 					}
 
@@ -1043,8 +1039,6 @@ private:
 				LogB << "Exception: MinerAux::doGetWork - " << e.what();
 			}
 		}
-
-		nodeRPC->closeTxFilter();
 
 	}	// doGetWork
 
