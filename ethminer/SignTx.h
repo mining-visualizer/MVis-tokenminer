@@ -20,11 +20,16 @@ using SigHash = FixedHash<68>;
 
 using Signature = SigHash;
 
-/// Named-boolean type to encode whether a signature be included in the serialisation process.
-enum IncludeSignature
-{
-	WithoutSignature = 0,	///< Do not include a signature.
-	WithSignature = 1,		///< Do include a signature.
+const byte TRANSACTIONTYPE = 2;
+
+enum RlpMode {
+	GenerateSigHash,
+	GeneratePayload
+};
+
+enum GasMarketType {
+	EIP1559 = 1,
+	Legacy = 0
 };
 
 struct SignatureStruct
@@ -89,41 +94,64 @@ class Transaction
 public:
 
 	// Constructs a null transaction.
-	Transaction() {}
+	Transaction(GasMarketType _eip1559 = Legacy) {
+		eip1559 = (bool) _eip1559;
+	}
 
-	void streamRLP(RLPStream& _s, IncludeSignature _sig) {
-		_s.appendList(9);
-		_s << nonce << gasPrice << gas;
-		_s << receiveAddress;
-		_s << value << data;
-		if (_sig) {
-			_s << m_vrs.v << (u256) m_vrs.r << (u256) m_vrs.s;
+	void streamRLP(RLPStream& _s, RlpMode _rlpMode) {
+		if (eip1559) {
+			std::vector<int> accessList;	// empty
+			_s.appendList((_rlpMode == GenerateSigHash) ? 9 : 12);
+			_s << chainId << nonce << priorityFee << maxFee;
+			_s << gas << receiveAddress << value << data << accessList;
+			if (_rlpMode == GeneratePayload) {
+				_s << m_vrs.v << (u256) m_vrs.r << (u256) m_vrs.s;
+			}
 		} else {
-			_s << chainId << (u256) 0 << (u256) 0;
+			_s.appendList(9);
+			_s << nonce << gasPrice << gas;
+			_s << receiveAddress;
+			_s << value << data;
+			if (_rlpMode == GeneratePayload) {
+				_s << m_vrs.v << (u256) m_vrs.r << (u256) m_vrs.s;
+			} else {
+				_s << chainId << (u256) 0 << (u256) 0;
+			}
 		}
+
 	}
 
 	/// @returns the RLP serialisation of this transaction.
-	bytes rlp(IncludeSignature _sig = WithSignature) { 
+	bytes rlp(RlpMode _rlpMode = GeneratePayload) {
 		RLPStream s; 
-		streamRLP(s, _sig); 
-		return s.out(); 
+		streamRLP(s, _rlpMode);
+		bytes txBytes(s.out());
+		if (eip1559) {
+			txBytes.insert(txBytes.begin(), TRANSACTIONTYPE);	// put the transaction type at the beginning
+		}
+		return txBytes;
 	}
 
 	/// @returns the SHA3 hash of the RLP serialisation of this transaction.
-	h256 sha3(IncludeSignature _sig = WithSignature) {
+	h256 generateTxHash(RlpMode _rlpMode = GeneratePayload) {
 		RLPStream s;
-		streamRLP(s, _sig);
-		auto ret = dev::sha3(s.out());
+		streamRLP(s, _rlpMode);
+		bytes txBytes(s.out());
+		if (eip1559) {
+			txBytes.insert(txBytes.begin(), TRANSACTIONTYPE);	// put the transaction type at the beginning
+		}
+		auto ret = dev::sha3(txBytes);
 		return ret;
 	}
 
 	void sign(Secret const& _priv) {
-		auto sig = signBytes(_priv, sha3(WithoutSignature));
+		auto sig = signBytes(_priv, generateTxHash(GenerateSigHash));
 		SignatureStruct sigStruct = *(SignatureStruct const*) &sig;
 		if (sigStruct.isValid()) {
 			m_vrs = sigStruct;
-			m_vrs.v += chainId * 2 + 35;
+			if (!eip1559) {
+				m_vrs.v += chainId * 2 + 35;
+			}
 		}
 	}
 
@@ -137,6 +165,9 @@ public:
 	h160 m_sender;					///< Cached sender, determined from signature.
 	string txHash;					///< hash of tx
 	bytes challenge;				///< challenge this tx was submitted under.
+	bool eip1559;
+	u256 priorityFee;
+	u256 maxFee;
 
 	SignatureStruct m_vrs;			///< The signature of the transaction. Encodes the sender.
 

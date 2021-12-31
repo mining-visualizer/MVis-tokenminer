@@ -238,7 +238,11 @@ public:
 
 
 		// prepare transaction
-		Transaction t;
+		ProgOpt::Reload();
+		string s1559 = ProgOpt::Get("Gas", "EIP1559", "true");
+		LowerCase(s1559);
+		bool is1559 = s1559 == "true" || s1559 == "1" || s1559 == "yes";
+		Transaction t( is1559 ? GasMarketType::EIP1559 : GasMarketType::Legacy );
 		t.chainId = m_chainId;
 		if (m_lastSolution.elapsedSeconds() > 5 * 60 || m_txNonce == -1)
 			m_txNonce = getNextNonce();
@@ -247,11 +251,13 @@ public:
 		m_lastSolution.restart();
 		t.nonce = m_txNonce;
 		t.receiveAddress = toAddress(m_tokenContract);
-		ProgOpt::Reload();
 		t.gas = atoi(ProgOpt::Get("0xBitcoin", "GasLimit", "200000").c_str());
-		m_startGas = atoi(ProgOpt::Get("0xBitcoin", "GasPrice").c_str());
-		m_maxGas = atoi(ProgOpt::Get("0xBitcoin", "MaxGasPrice").c_str());
-		t.gasPrice = RecommendedGasPrice(_challenge);
+		if (is1559) {
+			t.priorityFee = u256((unsigned) 2 * 1000000000ul);
+			t.maxFee = u256(20) * u256(1000000000);
+		} else {
+			t.gasPrice = u256(7) * u256(1000000000);
+		}
 
 		// compute data parameter : first 4 bytes is hash of function signature
 		h256 bMethod = sha3("mint(uint256,bytes32)");
