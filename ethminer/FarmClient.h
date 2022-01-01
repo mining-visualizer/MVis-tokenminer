@@ -197,10 +197,7 @@ public:
 
 		// prepare transaction
 		ProgOpt::Reload();
-		string s1559 = ProgOpt::Get("Gas", "EIP1559", "true");
-		LowerCase(s1559);
-		bool is1559 = s1559 == "true" || s1559 == "1" || s1559 == "yes";
-		Transaction t( is1559 ? GasMarketType::EIP1559 : GasMarketType::Legacy );
+		Transaction t;
 		t.chainId = m_chainId;
 		if (m_lastSolution.elapsedSeconds() > 5 * 60 || m_txNonce == -1)
 			m_txNonce = getNextNonce();
@@ -210,11 +207,11 @@ public:
 		t.nonce = m_txNonce;
 		t.receiveAddress = toAddress(m_tokenContract);
 		t.gas = atoi(ProgOpt::Get("0xBitcoin", "GasLimit", "200000").c_str());
-		if (is1559) {
-			t.priorityFee = u256((unsigned) 2 * 1000000000ul);
-			t.maxFee = u256(20) * u256(1000000000);
+		if (t.eip1559) {
+			t.priorityFee = u256(atof(ProgOpt::Get("Gas", "MaxPriorityFee").c_str()) * 1000000000);
+			t.maxFee = u256(atof(ProgOpt::Get("Gas", "MaxFee").c_str()) * 1000000000);
 		} else {
-			t.gasPrice = u256(7) * u256(1000000000);
+			t.gasPrice = u256(atof(ProgOpt::Get("Gas", "GasPrice").c_str()) * 1000000000);
 		}
 
 		// compute data parameter : first 4 bytes is hash of function signature
@@ -236,7 +233,8 @@ public:
 		t.challenge = _challenge;
 
 		txSignSend(t);
-		LogB << "Tx hash : " << t.txHash << ", gasPrice : " << t.gasPrice / 1000000000;
+		u256 showPrice = t.eip1559 ? t.priorityFee : t.gasPrice;
+		LogB << "Tx hash : " << t.txHash << ", gasPrice : " << showPrice.convert_to<double>() / 1000000000;
 		m_pendingTxs.push_back(t);
 	}
 
@@ -320,24 +318,6 @@ public:
 		}
 	}
 
-	u256 RecommendedGasPrice(bytes _challenge)
-	{
-		u256 recommendation = 0;
-		// can't get the max macro to work ... stupid conflicts!
-		if (recommendation == 0)
-			recommendation = m_startGas;
-		else
-			recommendation += m_bidTop;
-
-		if (recommendation < m_startGas)
-			recommendation = m_startGas;
-
-		if (recommendation > m_maxGas)
-			recommendation = m_startGas;
-
-		return recommendation * 1000000000;
-	}
-
 	void checkPendingTransactions()
 	{
 		vector<bytes> needsDeleting;
@@ -346,30 +326,20 @@ public:
 		{
 			Transaction t = m_pendingTxs[i];
 			TxStatus status = getTxStatus(t.txHash);
+			u256 showPrice = t.eip1559 ? t.priorityFee : t.gasPrice;
 			if (status == Succeeded)
 			{
 				needsDeleting.push_back(t.challenge);
-				LogB << "Tx " << t.txHash.substr(0, 10) << " succeeded, gasPrice = " << t.gasPrice / 1000000000 << "  :)";
+				LogB << "Tx " << t.txHash.substr(0, 10) << " succeeded, gasPrice = " << showPrice.convert_to<double>() / 1e9 << "  :)";
 			}
 			else if (status == Failed)
 			{
 				needsDeleting.push_back(t.challenge);
-				LogB << "Tx " << t.txHash.substr(0, 10) << " failed, gasPrice = " << t.gasPrice / 1000000000 << "  :(";
+				LogB << "Tx " << t.txHash.substr(0, 10) << " failed, gasPrice = " << showPrice.convert_to<double>() /  1e9 << "  :(";
 			}
 			else if (status == Waiting)
 			{
-				// adjust gas price if necessary
-				u256 recommended = RecommendedGasPrice(t.challenge);
-				if (t.gasPrice < recommended)
-				{
-					// increase gas price and resend
-					// but first make a copy of existing tx.  we can't be sure if the old one will get replaced
-					// by the new one, before one or the other gets mined.
-					t.gasPrice = recommended;
-					txSignSend(t);
-					m_pendingTxs.push_back(t);
-					LogB << "Adjusting gas price to " << t.gasPrice / 1000000000 << ", new tx hash=" << t.txHash;
-				}
+				// used to check if speed-up transaction was necessary
 			}
 		}
 

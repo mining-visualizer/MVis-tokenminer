@@ -27,11 +27,6 @@ enum RlpMode {
 	GeneratePayload
 };
 
-enum GasMarketType {
-	EIP1559 = 1,
-	Legacy = 0
-};
-
 struct SignatureStruct
 {
 	SignatureStruct() = default;
@@ -94,8 +89,10 @@ class Transaction
 public:
 
 	// Constructs a null transaction.
-	Transaction(GasMarketType _eip1559 = Legacy) {
-		eip1559 = (bool) _eip1559;
+	Transaction() {
+		string s1559 = ProgOpt::Get("Gas", "EIP1559", "true");
+		LowerCase(s1559);
+		eip1559 = s1559 == "true" || s1559 == "1" || s1559 == "yes";
 	}
 
 	void streamRLP(RLPStream& _s, RlpMode _rlpMode) {
