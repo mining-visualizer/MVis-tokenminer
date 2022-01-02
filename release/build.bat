@@ -15,10 +15,10 @@ cd %~dp0
 "C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe" /m:3 "..\build\MVis-tokenminer.sln" /t:Build /p:Configuration=Release
 IF ERRORLEVEL 1 GOTO ERROR
 
-
-REM Copy tokenminer.ini
-
 copy "..\tokenminer.ini" stage\tokenminer
+copy list-devices.bat stage\tokenminer
+copy start-mining.bat stage\tokenminer
+
 
 REM convert readme to html and copy to staging.  see https://github.com/joeyespo/grip
 
