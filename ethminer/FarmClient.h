@@ -207,11 +207,30 @@ public:
 		t.nonce = m_txNonce;
 		t.receiveAddress = toAddress(m_tokenContract);
 		t.gas = atoi(ProgOpt::Get("0xBitcoin", "GasLimit", "200000").c_str());
+		t.maxFee = u256(atof(ProgOpt::Get("Gas", "MaxFee").c_str()) * 1000000000);
 		if (t.eip1559) {
 			t.priorityFee = u256(atof(ProgOpt::Get("Gas", "MaxPriorityFee").c_str()) * 1000000000);
-			t.maxFee = u256(atof(ProgOpt::Get("Gas", "MaxFee").c_str()) * 1000000000);
+			if (t.priorityFee * t.maxFee == 0) {
+				LogB << "ERROR: INVALID GAS VALUES. CHECK INI FILE. (MaxPriorityFee & MaxFee)";
+			}
 		} else {
-			t.gasPrice = u256(atof(ProgOpt::Get("Gas", "GasPrice").c_str()) * 1000000000);
+			string gp = ProgOpt::Get("Gas", "GasPrice");
+			LowerCase(gp);
+			if (gp.find("oracle") != std::string::npos) {
+				try {
+					Json::Value result = CallMethod("eth_gasPrice", Json::Value());
+					t.gasPrice = HexToInt(result.asString());
+				} catch (const std::exception& e) {
+					LogB << "EXCEPTION: Call to gas oracle failed - " << e.what();
+				}
+			} else {
+				t.gasPrice = u256(atof(gp.c_str()) * 1000000000);
+			}
+			if (t.gasPrice * t.maxFee == 0) {
+				LogB << "ERROR: INVALID GAS VALUES. CHECK INI FILE. (GasPrice & MaxFee)";
+			}
+			// don't go over max 
+			t.gasPrice = min(t.gasPrice, t.maxFee);
 		}
 
 		// compute data parameter : first 4 bytes is hash of function signature
@@ -248,9 +267,12 @@ public:
 	}
 
 	int getChainId() {
-		Json::Value p;
-		Json::Value result = CallMethod("eth_chainId", p);
-		return HexToInt(result.asString());
+		try {
+			Json::Value result = CallMethod("eth_chainId", Json::Value());
+			return HexToInt(result.asString());
+		} catch (const std::exception& e) {
+			LogB << "ERROR RETRIEVING CHAIN ID: " << e.what();
+		}
 	}
 
 	uint64_t tokenBalance() {
@@ -376,8 +398,7 @@ public:
 	{
 		try
 		{
-			Json::Value p;
-			Json::Value result = CallMethod("eth_blockNumber", p);
+			Json::Value result = CallMethod("eth_blockNumber", Json::Value());
 			return jsToInt(result.asString());
 		}
 		catch (const std::exception& e)

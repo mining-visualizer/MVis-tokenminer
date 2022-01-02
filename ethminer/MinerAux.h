@@ -852,7 +852,7 @@ private:
 		if (m_opMode == OperationMode::Pool)
 		{
 			nodeClient = new jsonrpc::HttpClient(m_web3Url);
-			nodeRPC = new FarmClient(*nodeClient, OperationMode::Solo, m_userAcct);
+			nodeRPC = new FarmClient(*nodeClient, m_opMode, m_userAcct);
 		}
 		else
 			f.hashingAcct = m_userAcct;

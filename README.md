@@ -1,11 +1,11 @@
 ## MVis-tokenminer
 
 
-This page describes the miner for **0xBitcoin**.  For the regular ethereum miner, [click here](https://github.com/mining-visualizer/MVis-ethminer).
+This is a fork of my MVis-ethminer program, which was a fork of Genoil's ethminer.  CPU & AMD GPU mining are supported.  Pool mining and solo mining are both supported.
 
-This is a fork of my MVis-ethminer program, which was a fork of Genoil's ethminer-0.9.41-genoil-1.x.x. 
+ 
 
-* This miner should work with any GPU that supports OpenCL, ie. pretty much all AMDs and most NVidia.
+* This miner should work with any GPU that supports OpenCL, ie. pretty much all AMDs and some NVidia.  Performance is generally not very good with nVidia GPUs.
 * Windows binaries can be downloaded from the  [Releases](https://github.com/mining-visualizer/MVis-tokenminer/releases) page, or you can build from source (see below).
 * For Linux, the only option at present is to build from source.  See the instructions below.  
 * This miner supports both pool mining and solo mining. If you want to mine solo, you either need to run your own node, or use a public one (ie. Infura).
@@ -99,17 +99,20 @@ Node configuration:
 
 ```
 
+############################################################################
+
 [General]
 
-; Optional: uncomment this to specify your own web3 endpoint. you don't need this
-; to mine successfully.  it is only used for pool mining, to display your token
+; Optional. Pool Mining only. uncomment this to specify your own web3 endpoint. you
+; don't need this to mine successfully.  it is only used to display your token
 ; balance on screen. there are a variety of publicly available web3 services. 
 ; see https://ethereumnodes.com/
 
 ; Web3Url=https://mainnet.infura.io/v3/_your_infura_id_
-; Web3Url=http://127.0.0.1:8545
 
-;--------------------------------------------------------
+
+############################################################################
+
 [Node]
 
 ; If you are pool mining, set Host to the URL of your mining pool.
@@ -126,11 +129,13 @@ Node configuration:
 
 Host=
 
-; Pool Mining: Set this to true if the mining pool supports stratum protocol. 
-; Currently only mvis.ca does, on port 8090.
+; Pool Mining: Set this to true if the mining pool supports stratum protocol.
+; Currently only https://mvis.ca does, on port 8090.
 Stratum=false
 
-;--------------------------------------------------------
+
+############################################################################
+
 [Node2]
 
 ; Secondary (failover) node/mining pool, if you have one. Default is disabled.
@@ -139,7 +144,9 @@ Stratum=false
 
 Stratum=false
 
-;--------------------------------------------------------
+
+############################################################################
+
 [0xBitcoin]
 
 ; POOL MINING: Your ETH account, to which payouts will be made. THE PRIVATE
@@ -158,28 +165,10 @@ AcctPK=................................................................
 ; 0xBitcoin contract address. normally you will not change this.
 TokenContract=0xb6ed7644c69416d67b522e20bc294a9a9b405b31
 
-; THE REMAINING SETTINGS IN THIS SECTION APPLY ONLY TO SOLO MINING:
-
-; when your miner finds a solution, transactions will be submitted with this
-; amount of gas (gwei).  You can change this setting 'on the fly' (without having
-; to restart the miner).  All other setting changes require the miner to be restarted.
-GasPrice=5
-
-; Set to 1 to enable gas price bidding.  Transactions will be submitted
-; with [GasPrice] gas, unless there is someone else bidding, in which case
-; the gas price will be set to the price of the competing bid + [BidTop], up
-; to a maximum of [MaxGasPrice]. This feature has only been tested when running
-; Geth as a local node.  It is NOT supported by Infura nodes.
-GasPriceBidding=0
-
-; max gas price you're willing to bid up to
-MaxGasPrice=35
+; The remaining settings in this section apply only to SOLO MINING:
 
 ; gas limit used when submitting solution
 GasLimit=200000
-
-; the # of gwei to top the highest bidder
-BidTop=2
 
 ; if you have multiple mining rigs, specify a shared folder to make sure
 ; multiple miners don't try to submit a solution for the same challenge.
@@ -187,7 +176,33 @@ BidTop=2
 ChallengeFolder=
 
 
-;--------------------------------------------------------
+############################################################################
+
+; this section only applies to SOLO MINING
+
+[Gas]
+
+; All settings in this section can be changed 'on the fly' (without having
+; to restart the miner).
+
+; set to true to send EIP-1559 style transactions when minting. set to false to 
+; use old-style legacy transactions.
+EIP1559=true
+
+; priority fee (miner tip) to use for mint transactions, in gwei. Only used for EIP-1559 transactions.
+MaxPriorityFee=1.5
+
+; gas price to use for mint transactions, in gwei. Only used for LEGACY transactions.
+; You can also specify "oracle" to use recommended gas price from web3.eth.getGasPrice
+GasPrice=oracle
+
+; max gas price in gwei.  for EIP-1559 transactions this is the MaxFeePerGas setting. for 
+; legacy transactions this can be used to put an upper limit on gas oracle recommendations.
+MaxFee=
+
+
+############################################################################
+
 [ThermalProtection]
 
 ; Temperature provider ('amd_adl' or 'speedfan')
@@ -200,7 +215,6 @@ ThrottleTemp=80
 ; Number of seconds after which the entire mining rig will shutdown if one or more GPUs
 ; remain at or above ThrottleTemp.
 ShutDown=20
-
 
 ```
 
@@ -228,7 +242,9 @@ cmake -G "Visual Studio 12 2013 Win64" ..
 
 ### Building on Ubuntu
 
-This has only been verified to work with **Ubuntu 16.04**.  OpenCL only (**for AMD cards**)
+##### Ubuntu 16.04
+
+This has only been verified to work with Ubuntu 16.04.  OpenCL only (**for AMD cards**)
 
 ```bash
 sudo apt-get update
