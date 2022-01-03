@@ -189,13 +189,13 @@ EIP1559=true
 ; priority fee (miner tip) to use for mint transactions, in gwei. Only used for EIP-1559 transactions.
 MaxPriorityFee=1.5
 
-; gas price to use for mint transactions, in gwei. Only used for LEGACY transactions.
-; You can also specify "oracle" to use recommended gas price from web3.eth.getGasPrice
-GasPrice=oracle
-
 ; max gas price in gwei.  for EIP-1559 transactions this is the MaxFeePerGas setting. for 
 ; legacy transactions this can be used to put an upper limit on gas oracle recommendations.
 MaxFee=
+
+; LEGACY transactions only: gas price to use for mint transactions, in gwei. 
+; You can also specify "oracle" to use recommended gas price from web3.eth.getGasPrice
+GasPrice=oracle
 
 
 ############################################################################
