@@ -27,6 +27,7 @@ This is a fork of my MVis-ethminer program, which was a fork of Genoil's ethmine
 ```
 [Node]
 Host=http://your_mining_pool.com:8080
+Stratum=false
 
 [0xBitcoin]
 MinerAcct=0x1234512345123451234512345123451234512345
